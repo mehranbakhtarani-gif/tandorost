@@ -969,20 +969,28 @@ private fun RoutinePanel(
         Triple("فول‌بادی متوسط بدون وسیله", 5.0, "اسکوات، لانج، شنا و تمرین میان‌تنه"),
         Triple("تمرین شکم و میان‌تنه", 3.8, "پلانک، دِدباگ و کرانچ کنترل‌شده")
     )
-    var selected by remember { mutableStateOf(workouts[0].first) }
-    var minutes by remember { mutableStateOf("15") }
-    val selectedWorkout = workouts.first { it.first == selected }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val workoutPrefs = remember { context.getSharedPreferences("mfit_native", Context.MODE_PRIVATE) }
+    var selected by remember { mutableStateOf(workoutPrefs.getString("active_workout_name", workouts[0].first) ?: workouts[0].first) }
+    var minutes by remember { mutableStateOf(workoutPrefs.getInt("active_workout_duration", 15).toString()) }
+    val selectedWorkout = workouts.firstOrNull { it.first == selected } ?: workouts[0]
     val duration = minutes.toIntOrNull()?.coerceIn(1, 180) ?: 0
     val estimated = selectedWorkout.second * 3.5 * weightKg / 200.0 * duration
     val totalBurned = workoutLog.sumOf { it.substringAfterLast("|", "0").toDoubleOrNull() ?: 0.0 }
-    var workoutRemainingSeconds by remember { mutableIntStateOf(0) }
-    var workoutRunning by remember { mutableStateOf(false) }
-    var workoutSessionStarted by remember { mutableStateOf(false) }
+    var workoutRemainingSeconds by remember { mutableIntStateOf(workoutPrefs.getInt("workout_remaining_seconds", 0)) }
+    var workoutRunning by remember { mutableStateOf(workoutPrefs.getBoolean("workout_running", false)) }
+    var workoutSessionStarted by remember { mutableStateOf(workoutPrefs.getBoolean("workout_session_started", false)) }
     LaunchedEffect(workoutRunning) {
-        while (workoutRunning && workoutRemainingSeconds > 0) {
+        while (workoutRunning) {
+            val endAt = workoutPrefs.getLong("workout_end_at", 0L)
+            workoutRemainingSeconds = ((endAt - System.currentTimeMillis()) / 1000L).toInt().coerceAtLeast(0)
+            workoutPrefs.edit().putInt("workout_remaining_seconds", workoutRemainingSeconds).apply()
+            if (workoutRemainingSeconds == 0) {
+                workoutRunning = false
+                workoutPrefs.edit().putBoolean("workout_running", false).apply()
+                break
+            }
             delay(1000L)
-            workoutRemainingSeconds = (workoutRemainingSeconds - 1).coerceAtLeast(0)
-            if (workoutRemainingSeconds == 0) workoutRunning = false
         }
     }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -1063,7 +1071,18 @@ private fun RoutinePanel(
                     Text("%02d:%02d".format(workoutRemainingSeconds / 60, workoutRemainingSeconds % 60),
                         color = Ink, fontSize = 38.sp, fontWeight = FontWeight.Black)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { workoutRunning = !workoutRunning }, modifier = Modifier.weight(1f)) {
+                        OutlinedButton(onClick = {
+                            if (workoutRunning) {
+                                val left = ((workoutPrefs.getLong("workout_end_at", 0L) - System.currentTimeMillis()) / 1000L).toInt().coerceAtLeast(0)
+                                workoutRemainingSeconds = left
+                                workoutRunning = false
+                                workoutPrefs.edit().putInt("workout_remaining_seconds", left).putBoolean("workout_running", false).apply()
+                            } else {
+                                workoutRunning = true
+                                workoutPrefs.edit().putBoolean("workout_running", true)
+                                    .putLong("workout_end_at", System.currentTimeMillis() + workoutRemainingSeconds * 1000L).apply()
+                            }
+                        }, modifier = Modifier.weight(1f)) {
                             Icon(if (workoutRunning) Icons.Default.Pause else Icons.Default.PlayArrow, null)
                             Spacer(Modifier.width(5.dp)); Text(if (workoutRunning) "مکث" else "ادامه")
                         }
@@ -1074,6 +1093,8 @@ private fun RoutinePanel(
                             workoutRunning = false
                             workoutSessionStarted = false
                             workoutRemainingSeconds = 0
+                            workoutPrefs.edit().putBoolean("workout_running", false).putBoolean("workout_session_started", false)
+                                .putInt("workout_remaining_seconds", 0).putLong("workout_end_at", 0L).apply()
                         }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Ink)) {
                             Icon(Icons.Default.Check, null); Spacer(Modifier.width(5.dp)); Text("پایان و ثبت")
                         }
@@ -1088,6 +1109,10 @@ private fun RoutinePanel(
                     workoutRemainingSeconds = duration * 60
                     workoutSessionStarted = true
                     workoutRunning = true
+                    workoutPrefs.edit().putString("active_workout_name", selectedWorkout.first)
+                        .putInt("active_workout_duration", duration).putInt("workout_remaining_seconds", workoutRemainingSeconds)
+                        .putBoolean("workout_session_started", true).putBoolean("workout_running", true)
+                        .putLong("workout_end_at", System.currentTimeMillis() + duration * 60_000L).apply()
                 }
             }, enabled = duration > 0, modifier = Modifier.fillMaxWidth().height(54.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = RoundedCornerShape(17.dp)) {
