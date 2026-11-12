@@ -4,7 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -15,17 +15,17 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 
 internal object MFitPalette {
-    val Ink = Color(0xFF151B1A)
-    val InkSoft = Color(0xFF26302D)
+    val Ink = Color(0xFFF2F5F1)
+    val InkSoft = Color(0xFFCAD3CC)
     val Lime = Color(0xFFD5F45B)
-    val LimeSoft = Color(0xFFEAF3C8)
-    val Canvas = Color(0xFFF3F5F0)
-    val Surface = Color(0xFFFFFFFF)
-    val SurfaceAlt = Color(0xFFE9EDE6)
-    val Muted = Color(0xFF7B8580)
-    val Stroke = Color(0xFFE4E9E1)
-    val Positive = Color(0xFF3D8064)
-    val Danger = Color(0xFFB94A43)
+    val LimeSoft = Color(0xFF354326)
+    val Canvas = Color(0xFF090D0B)
+    val Surface = Color(0xFF141B17)
+    val SurfaceAlt = Color(0xFF202923)
+    val Muted = Color(0xFF9AA69E)
+    val Stroke = Color(0xFF344139)
+    val Positive = Color(0xFF8FC9A7)
+    val Danger = Color(0xFFFF8278)
 }
 
 /**
@@ -59,7 +59,7 @@ internal fun Modifier.glassSurface(
 @Composable
 internal fun MFitTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = lightColorScheme(
+        colorScheme = darkColorScheme(
             primary = MFitPalette.Ink,
             onPrimary = Color.White,
             secondary = MFitPalette.Lime,
