@@ -320,7 +320,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
         Scaffold(
             modifier = Modifier.background(
                 androidx.compose.ui.graphics.Brush.linearGradient(
-                    listOf(Color(0xFFE5ECE8), Paper, Color(0xFFE8EDF2))
+                    listOf(Color(0xFF080B09), Color(0xFF101713), Color(0xFF080B09))
                 )
             ),
             containerColor = Color.Transparent,
@@ -332,22 +332,23 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 Row(
-                    Modifier.fillMaxWidth().padding(top = 22.dp),
+                    Modifier.fillMaxWidth().padding(top = 28.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text("M F I T", fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp, color = Ink)
+                        Text("M F I T  /  WELLNESS", fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.2.sp, color = Lime)
+                        if (tab == Tab.HOME) Text(java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("EEEE, dd MMM", java.util.Locale.ENGLISH)).uppercase(), fontSize = 9.sp, letterSpacing = 1.6.sp, color = Muted)
                         Text(when(tab) {
-                            Tab.HOME -> "سلام، آماده‌ای؟"
+                            Tab.HOME -> "روزت را زندگی کن."
                             Tab.ACTIVITY -> "وقت حرکته."
                             Tab.FOOD -> "سوخت بدنت."
                             Tab.ROUTINE -> "عادت‌های کوچک، نتیجه‌های بزرگ."
                             Tab.PROFILE -> "مسیر پیشرفت تو."
-                        }, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
+                        }, fontSize = if (tab == Tab.HOME) 29.sp else 25.sp, fontWeight = FontWeight.ExtraBold, color = Ink, lineHeight = 36.sp)
                     }
                     Box(Modifier.size(44.dp).clip(CircleShape).background(Lime), contentAlignment = Alignment.Center) {
-                        Text("M", fontWeight = FontWeight.Black, fontSize = 21.sp, color = Ink)
+                        Text("M", fontWeight = FontWeight.Black, fontSize = 21.sp, color = Color(0xFF101510))
                     }
                 }
                 AnimatedContent(
@@ -366,8 +367,8 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                     when(page) {
                     Tab.HOME -> {
-                        WeatherPanel(weatherPermissionGranted, onWeatherPermission)
                         HomeHero(tracking, distance, shownSeconds, onStart = { tab = Tab.ACTIVITY; onStart() })
+                        WeatherPanel(weatherPermissionGranted, onWeatherPermission)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             DashboardStat("آب امروز", water.toString(), "لیوان", Icons.Default.WaterDrop, Modifier.weight(1f))
                             DashboardStat("آخرین فعالیت", if(lastActivity == "—") "—" else lastActivity, "کیلومتر", Icons.Default.DirectionsRun, Modifier.weight(1f))
@@ -494,7 +495,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
 private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)
-            .glassSurface(RoundedCornerShape(28.dp), Color(0xFFEAF4F1)),
+            .glassSurface(RoundedCornerShape(28.dp), Color(0xFF17211B)),
         shape = RoundedCornerShape(28.dp),
         color = Color.Transparent,
         shadowElevation = 0.dp,
@@ -531,7 +532,7 @@ private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
                                 Tab.PROFILE -> Icons.Default.Person
                             },
                             contentDescription = item.label,
-                            tint = if (selected) Ink else Muted,
+                            tint = if (selected) Color(0xFF101510) else Muted,
                             modifier = Modifier.size(iconSize).graphicsLayer { scaleX = iconScale; scaleY = iconScale }
                         )
                     }
@@ -539,7 +540,7 @@ private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
                         item.label,
                         fontSize = 9.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (selected) Ink else Muted,
+                        color = if (selected) Lime else Muted,
                         modifier = Modifier.graphicsLayer { alpha = labelAlpha },
                         maxLines = 1
                     )
@@ -558,7 +559,7 @@ private fun HomeHero(tracking: Boolean, distance: Float, seconds: Long, onStart:
         label = "hero-glow-pulse"
     )
     Box(
-        Modifier.fillMaxWidth().height(246.dp).glassSurface(RoundedCornerShape(30.dp), Color(0xFF24332E))
+        Modifier.fillMaxWidth().height(292.dp).glassSurface(RoundedCornerShape(34.dp), Color(0xFF18241D))
             .clickable(onClick = onStart).padding(22.dp)
     ) {
         Canvas(Modifier.fillMaxSize()) {
@@ -597,7 +598,7 @@ private fun HomeHero(tracking: Boolean, distance: Float, seconds: Long, onStart:
             drawCircle(Lime.copy(alpha = glowPulse.value), 105.dp.toPx(), androidx.compose.ui.geometry.Offset(centerX, centerY))
         }
         Column(
-            Modifier.align(Alignment.CenterStart).fillMaxWidth(.64f),
+            Modifier.align(Alignment.CenterStart).fillMaxWidth(.58f),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text("YOUR DAILY WELLNESS", color = Lime, fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
