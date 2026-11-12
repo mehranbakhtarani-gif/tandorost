@@ -1,5 +1,7 @@
 package com.mfit.app
+import android.Manifest
 import android.app.*
+import android.content.pm.PackageManager
 import android.content.Intent
 import android.location.Location
 import android.location.LocationListener
@@ -8,6 +10,9 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.Handler
+import android.os.Looper
+import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -20,6 +25,19 @@ class TrackingService : Service(), LocationListener {
     private var startedAt = 0L
     private var lastAcceptedAt = 0L
     private var wakeLock: PowerManager.WakeLock? = null
+    private val timerHandler = Handler(Looper.getMainLooper())
+    private val timerTick = object : Runnable {
+        override fun run() {
+            val now = System.currentTimeMillis()
+            val elapsed = ((now - startedAt) / 1000L).coerceAtLeast(0L)
+            getSharedPreferences("mfit_native", MODE_PRIVATE).edit()
+                .putLong("live_seconds", elapsed)
+                .putBoolean("tracking_active", true)
+                .apply()
+            sendBroadcast(Intent("com.mfit.app.TRACK_UPDATE").setPackage(packageName))
+            timerHandler.postDelayed(this, 1000L)
+        }
+    }
     override fun onCreate() {
         super.onCreate()
         val prefs = getSharedPreferences("mfit_native", MODE_PRIVATE)
@@ -47,7 +65,16 @@ class TrackingService : Service(), LocationListener {
             .build()
         startForeground(7, notification)
         manager = getSystemService(LOCATION_SERVICE) as LocationManager
-        try { manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 3000L, 2f, this) } catch (_: SecurityException) {}
+        val hasFine = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val provider = if (hasFine) LocationManager.GPS_PROVIDER else LocationManager.NETWORK_PROVIDER
+        try {
+            if (manager.isProviderEnabled(provider)) {
+                manager.requestLocationUpdates(provider, 2000L, 1f, this)
+            }
+        } catch (_: SecurityException) {
+            // Timer remains active even if location permission/provider is unavailable.
+        }
+        timerHandler.post(timerTick)
     }
     override fun onLocationChanged(location: Location) {
         if (location.accuracy > 35f) return
@@ -86,8 +113,10 @@ class TrackingService : Service(), LocationListener {
         try { manager.removeUpdates(this) } catch (_: Exception) {}
         try { if (wakeLock?.isHeld == true) wakeLock?.release() } catch (_: Exception) {}
         wakeLock = null
+        timerHandler.removeCallbacks(timerTick)
         val p = getSharedPreferences("mfit_native", MODE_PRIVATE)
-        val meters = p.getFloat("live_distance", 0f); val seconds = p.getLong("live_seconds", 0L)
+        val meters = p.getFloat("live_distance", 0f)
+        val seconds = ((System.currentTimeMillis() - startedAt) / 1000L).coerceAtLeast(p.getLong("live_seconds", 0L))
         if (meters > 0f) {
             val date = SimpleDateFormat("yyyy/MM/dd  HH:mm", Locale.getDefault()).format(Date())
             val history = try { JSONArray(p.getString("activity_history", "[]")) } catch (_: Exception) { JSONArray() }
@@ -107,9 +136,9 @@ class TrackingService : Service(), LocationListener {
                 .putString("last_activity", "%.2f".format(Locale.US, meters / 1000f))
                 .putLong("last_activity_seconds", seconds)
                 .putString("workout_log_date", today).putString("workout_log_today", workoutLog.joinToString("\n"))
-                .putFloat("live_distance", 0f).putLong("live_seconds", 0L)
+                .putFloat("live_distance", 0f).putLong("live_seconds", 0L).putLong("session_started_at", 0L)
                 .putBoolean("tracking_active", false).apply()
-        } else p.edit().putBoolean("tracking_active", false).apply()
+        } else p.edit().putFloat("live_distance", 0f).putLong("live_seconds", 0L).putLong("session_started_at", 0L).putBoolean("tracking_active", false).apply()
         sendBroadcast(Intent("com.mfit.app.TRACK_UPDATE").setPackage(packageName))
         super.onDestroy()
     }
