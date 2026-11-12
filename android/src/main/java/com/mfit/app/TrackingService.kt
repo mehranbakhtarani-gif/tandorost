@@ -66,11 +66,12 @@ class TrackingService : Service(), LocationListener {
         startForeground(7, notification)
         manager = getSystemService(LOCATION_SERVICE) as LocationManager
         val hasFine = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        val provider = if (hasFine) LocationManager.GPS_PROVIDER else LocationManager.NETWORK_PROVIDER
+        val preferredProvider = if (hasFine) LocationManager.GPS_PROVIDER else LocationManager.NETWORK_PROVIDER
+        val fallbackProvider = if (hasFine) LocationManager.NETWORK_PROVIDER else null
+        val provider = listOfNotNull(preferredProvider, fallbackProvider)
+            .firstOrNull { candidate -> try { manager.isProviderEnabled(candidate) } catch (_: Exception) { false } }
         try {
-            if (manager.isProviderEnabled(provider)) {
-                manager.requestLocationUpdates(provider, 2000L, 1f, this)
-            }
+            if (provider != null) manager.requestLocationUpdates(provider, 2000L, 1f, this)
         } catch (_: SecurityException) {
             // Timer remains active even if location permission/provider is unavailable.
         }
