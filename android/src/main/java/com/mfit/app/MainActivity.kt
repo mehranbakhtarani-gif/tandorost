@@ -388,7 +388,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                             message = when {
                                 sleep < 6f -> "امروز تمرین سبک را انتخاب کن و خواب را در اولویت بگذار."
                                 water < 4 -> "یک لیوان آب بنوش و در طول روز آب‌رسانی را ادامه بده."
-                                workoutCalories == 0 -> "برای شروع، یک پیاده‌روی کوتاه و راحت انتخاب خوبی است."
+                                workoutCaloriesToday == 0 -> "برای شروع، یک پیاده‌روی کوتاه و راحت انتخاب خوبی است."
                                 else -> "آفرین؛ استمرار را حفظ کن و برای ریکاوری هم زمان بگذار."
                             },
                             onActivity = { tab = Tab.ACTIVITY }
@@ -626,7 +626,6 @@ private fun HomeHero(tracking: Boolean, distance: Float, seconds: Long, onStart:
 }
 
 @Composable
-@Composable
 private fun VoiceCoachPanel(message: String, onActivity: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var speaking by remember { mutableStateOf(false) }
@@ -716,6 +715,7 @@ private fun AchievementPanel(snapshots: List<DailyWellnessSnapshot>, workouts: I
     }
 }
 
+@Composable
 private fun SmartCoachPanel(
     water: Int, mealCount: Int, sleepHours: Float, workoutCalories: Int,
     habitsCompleted: Int, weeklyDays: Int, weeklyWorkoutCalories: Int, weeklyAverageWater: Int, onFood: () -> Unit, onRoutine: () -> Unit
