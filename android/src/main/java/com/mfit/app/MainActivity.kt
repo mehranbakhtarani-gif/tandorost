@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.location.Location
 import android.location.LocationManager
+import android.speech.tts.TextToSpeech
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -383,6 +384,17 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                             onFood = { tab = Tab.FOOD },
                             onRoutine = { tab = Tab.ROUTINE }
                         )
+                        VoiceCoachPanel(
+                            message = when {
+                                sleep < 6f -> "امروز تمرین سبک را انتخاب کن و خواب را در اولویت بگذار."
+                                water < 4 -> "یک لیوان آب بنوش و در طول روز آب‌رسانی را ادامه بده."
+                                workoutCalories == 0 -> "برای شروع، یک پیاده‌روی کوتاه و راحت انتخاب خوبی است."
+                                else -> "آفرین؛ استمرار را حفظ کن و برای ریکاوری هم زمان بگذار."
+                            },
+                            onActivity = { tab = Tab.ACTIVITY }
+                        )
+                        WeeklyAnalyticsPanel(weeklySnapshots)
+                        AchievementPanel(weeklySnapshots, workoutLog.size, habitsDone.count { it })
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                 Text("سلامت روزانه", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
@@ -614,6 +626,96 @@ private fun HomeHero(tracking: Boolean, distance: Float, seconds: Long, onStart:
 }
 
 @Composable
+@Composable
+private fun VoiceCoachPanel(message: String, onActivity: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var speaking by remember { mutableStateOf(false) }
+    val tts = remember {
+        TextToSpeech(context) { status ->
+            speaking = false
+        }
+    }
+    DisposableEffect(tts) {
+        onDispose { tts.stop(); tts.shutdown() }
+    }
+    Column(Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(22.dp), Color(0xFFEAF2F0)).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            Icon(Icons.Default.RecordVoiceOver, null, tint = Ink, modifier = Modifier.size(22.dp))
+            Text("راهنمای صوتی MFit", color = Ink, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        }
+        Text(message, color = Muted, fontSize = 12.sp, lineHeight = 19.sp)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = {
+                val result = tts.setLanguage(java.util.Locale("fa", "IR"))
+                tts.speak(message, TextToSpeech.QUEUE_FLUSH, null, "mfit-daily-coach")
+                speaking = true
+            }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Ink)) {
+                Icon(Icons.Default.VolumeUp, null); Spacer(Modifier.width(6.dp)); Text("پخش راهنمای امروز")
+            }
+            OutlinedButton(onClick = onActivity) { Icon(Icons.Default.DirectionsRun, null); Text("فعالیت") }
+        }
+        Text("پخش فارسی به پشتیبانی موتور گفتار نصب‌شده روی گوشی وابسته است.", color = Muted, fontSize = 9.sp)
+    }
+}
+
+@Composable
+private fun WeeklyAnalyticsPanel(snapshots: List<DailyWellnessSnapshot>) {
+    val values = snapshots.takeLast(7)
+    Column(Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(24.dp)).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("تحلیل هفتگی", color = Ink, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+        Text("روند ثبت آب و کالری تمرین در روزهای ذخیره‌شده", color = Muted, fontSize = 11.sp)
+        if (values.isEmpty()) {
+            Text("با ثبت فعالیت‌ها و عادت‌های روزانه، نمودار هفتگی ساخته می‌شود.", color = Muted, fontSize = 11.sp)
+        } else {
+            values.forEach { day ->
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(day.date.takeLast(5), color = Ink, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                        Text("${day.workoutCalories} kcal تمرین • ${day.water} لیوان آب", color = Muted, fontSize = 9.sp)
+                    }
+                    Row(Modifier.fillMaxWidth().height(7.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Box(Modifier.weight((day.water.coerceAtLeast(0) + 1).toFloat()).fillMaxHeight().clip(CircleShape).background(Color(0xFF8BAA9A)))
+                        Box(Modifier.weight((day.workoutCalories.coerceAtLeast(0) / 20f + 1f)).fillMaxHeight().clip(CircleShape).background(Lime))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AchievementPanel(snapshots: List<DailyWellnessSnapshot>, workouts: Int, habits: Int) {
+    val activeDays = snapshots.count { it.workoutCalories > 0 || it.habits > 0 }
+    val badges = listOf(
+        Triple("شروع مسیر", "اولین روز ثبت‌شده", activeDays >= 1),
+        Triple("سه روز فعال", "ساختن یک ریتم اولیه", activeDays >= 3),
+        Triple("هفت روز پیوسته", "یک هفته ثبت منظم", activeDays >= 7),
+        Triple("تمرین‌دوست", "ثبت ۵ جلسه تمرین", workouts >= 5),
+        Triple("عادت‌ساز", "تکمیل همه عادت‌های امروز", habits >= 4)
+    )
+    Column(Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(24.dp), Color(0xFFEAF2D4)).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("دستاوردها", color = Ink, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp)
+        badges.chunked(2).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { badge ->
+                    Column(Modifier.weight(1f).clip(RoundedCornerShape(15.dp))
+                        .background(if (badge.third) Color.White.copy(alpha = .72f) else Color.White.copy(alpha = .28f)).padding(11.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(if (badge.third) Icons.Default.EmojiEvents else Icons.Default.Lock, null,
+                            tint = if (badge.third) Color(0xFF758C20) else Muted, modifier = Modifier.size(19.dp))
+                        Text(badge.first, color = Ink, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        Text(badge.second, color = Muted, fontSize = 9.sp)
+                    }
+                }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+}
+
 private fun SmartCoachPanel(
     water: Int, mealCount: Int, sleepHours: Float, workoutCalories: Int,
     habitsCompleted: Int, weeklyDays: Int, weeklyWorkoutCalories: Int, weeklyAverageWater: Int, onFood: () -> Unit, onRoutine: () -> Unit
@@ -772,6 +874,18 @@ private fun ActivityPanel(
                             routeLine.setPoints(geo)
                             if (routeLine !in map.overlays) map.overlays.add(routeLine)
                             currentMarker.position = geo.last()
+                            currentMarker.icon = ContextCompat.getDrawable(context, android.R.drawable.ic_menu_mylocation)
+                            if (geo.size > 1) {
+                                val previousPoint = Location("mfit-route").apply {
+                                    latitude = geo[geo.lastIndex - 1].latitude
+                                    longitude = geo[geo.lastIndex - 1].longitude
+                                }
+                                val currentPoint = Location("mfit-route").apply {
+                                    latitude = geo.last().latitude
+                                    longitude = geo.last().longitude
+                                }
+                                currentMarker.rotation = previousPoint.bearingTo(currentPoint)
+                            }
                             currentMarker.title = if (tracking) "موقعیت فعلی" else "پایان مسیر"
                             if (currentMarker !in map.overlays) map.overlays.add(currentMarker)
                             if (!hasCenteredOnRoute) {
@@ -861,6 +975,16 @@ private fun RoutinePanel(
     val duration = minutes.toIntOrNull()?.coerceIn(1, 180) ?: 0
     val estimated = selectedWorkout.second * 3.5 * weightKg / 200.0 * duration
     val totalBurned = workoutLog.sumOf { it.substringAfterLast("|", "0").toDoubleOrNull() ?: 0.0 }
+    var workoutRemainingSeconds by remember { mutableIntStateOf(0) }
+    var workoutRunning by remember { mutableStateOf(false) }
+    var workoutSessionStarted by remember { mutableStateOf(false) }
+    LaunchedEffect(workoutRunning) {
+        while (workoutRunning && workoutRemainingSeconds > 0) {
+            delay(1000L)
+            workoutRemainingSeconds = (workoutRemainingSeconds - 1).coerceAtLeast(0)
+            if (workoutRemainingSeconds == 0) workoutRunning = false
+        }
+    }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SectionTitle("روتین روزانه", "تمرین، خواب و مراقبت‌های روزمره")
         Card(modifier = Modifier.glassSurface(RoundedCornerShape(24.dp), Ink), colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(24.dp)) {
@@ -931,10 +1055,45 @@ private fun RoutinePanel(
                 Text("${selectedWorkout.second} MET", color = Muted, fontSize = 11.sp)
             }
         }
-        Button(onClick = { if (duration > 0) onAddWorkout("${selectedWorkout.first}|$duration|${estimated.toInt()}") },
-            enabled = duration > 0, modifier = Modifier.fillMaxWidth().height(54.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = RoundedCornerShape(17.dp)) {
-            Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text("ثبت تمرین و افزودن کالری")
+        if (workoutSessionStarted) {
+            Card(modifier = Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(22.dp), Color(0xFFEAF2D4)),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(22.dp)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("جلسه فعال • ${selectedWorkout.first}", color = Ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("%02d:%02d".format(workoutRemainingSeconds / 60, workoutRemainingSeconds % 60),
+                        color = Ink, fontSize = 38.sp, fontWeight = FontWeight.Black)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { workoutRunning = !workoutRunning }, modifier = Modifier.weight(1f)) {
+                            Icon(if (workoutRunning) Icons.Default.Pause else Icons.Default.PlayArrow, null)
+                            Spacer(Modifier.width(5.dp)); Text(if (workoutRunning) "مکث" else "ادامه")
+                        }
+                        Button(onClick = {
+                            val completedMinutes = ((duration * 60 - workoutRemainingSeconds) / 60).coerceAtLeast(1)
+                            val calories = (selectedWorkout.second * 3.5 * weightKg / 200.0 * completedMinutes).toInt()
+                            onAddWorkout("${selectedWorkout.first}|$completedMinutes|$calories")
+                            workoutRunning = false
+                            workoutSessionStarted = false
+                            workoutRemainingSeconds = 0
+                        }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Ink)) {
+                            Icon(Icons.Default.Check, null); Spacer(Modifier.width(5.dp)); Text("پایان و ثبت")
+                        }
+                    }
+                    Text(if (workoutRemainingSeconds == 0) "زمان تمرین تمام شد؛ جلسه را ثبت کن." else "زمان‌سنج مستقل از تغییر صفحات تا زمانی که این صفحه فعال باشد کار می‌کند.",
+                        color = Muted, fontSize = 10.sp)
+                }
+            }
+        } else {
+            Button(onClick = {
+                if (duration > 0) {
+                    workoutRemainingSeconds = duration * 60
+                    workoutSessionStarted = true
+                    workoutRunning = true
+                }
+            }, enabled = duration > 0, modifier = Modifier.fillMaxWidth().height(54.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = RoundedCornerShape(17.dp)) {
+                Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(7.dp)); Text("شروع تمرین زمان‌دار")
+            }
+            Text("پس از پایان جلسه، مدت واقعی و کالری تخمینی آن ثبت می‌شود.", color = Muted, fontSize = 10.sp)
         }
         if (workoutLog.isNotEmpty()) {
             SectionTitle("تمرین‌های ثبت‌شده امروز", "${workoutLog.size} جلسه")
