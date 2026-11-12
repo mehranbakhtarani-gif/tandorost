@@ -91,7 +91,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() { unregisterReceiver(receiver); super.onDestroy() }
 }
 
-private enum class Tab(val label: String) { HOME("خانه"), ACTIVITY("فعالیت"), FOOD("تغذیه"), SLEEP("خواب"), PROFILE("پروفایل") }
+private enum class Tab(val label: String) { HOME("خانه"), ACTIVITY("فعالیت"), FOOD("تغذیه"), ROUTINE("روتین"), PROFILE("پروفایل") }
 
 @Composable
 private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActivity: String, imported: Boolean, routePoints: List<Pair<Double, Double>>, activityHistory: List<String>,
@@ -103,6 +103,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
     var mealLog by remember { mutableStateOf(listOf<String>()) }
     var sleep by remember { mutableFloatStateOf(8f) }
     var weight by remember { mutableStateOf("96") }
+    var workoutLog by remember { mutableStateOf(listOf<String>()) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { context.getSharedPreferences("mfit_native", Context.MODE_PRIVATE) }
     LaunchedEffect(Unit) {
@@ -112,6 +113,9 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
         mealLog = prefs.getString("meals_today", "")?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
         weight = prefs.getString("weight", "96") ?: "96"
         sleep = prefs.getFloat("sleep_hours", 8f)
+        val today = java.time.LocalDate.now().toString()
+        if (prefs.getString("workout_log_date", "") != today) prefs.edit().putString("workout_log_date", today).putString("workout_log_today", "").apply()
+        workoutLog = prefs.getString("workout_log_today", "")?.split("\n")?.filter { it.isNotBlank() } ?: emptyList()
     }
     MaterialTheme(colorScheme = lightColorScheme(primary = Ink, secondary = Lime, background = Paper, surface = Color.White)) {
         Scaffold(
@@ -126,7 +130,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                                 Tab.HOME -> Icons.Default.Home
                                 Tab.ACTIVITY -> Icons.Default.DirectionsRun
                                 Tab.FOOD -> Icons.Default.Restaurant
-                                Tab.SLEEP -> Icons.Default.Bedtime
+                                Tab.ROUTINE -> Icons.Default.FitnessCenter
                                 Tab.PROFILE -> Icons.Default.Person
                             }, null) },
                             label = { Text(item.label, fontSize = 10.sp, fontWeight = if(selected) FontWeight.Bold else FontWeight.Normal) },
@@ -152,7 +156,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                             Tab.HOME -> "سلام، آماده‌ای؟"
                             Tab.ACTIVITY -> "وقت حرکته."
                             Tab.FOOD -> "سوخت بدنت."
-                            Tab.SLEEP -> "زمان ریکاوری."
+                            Tab.ROUTINE -> "عادت‌های کوچک، نتیجه‌های بزرگ."
                             Tab.PROFILE -> "مسیر پیشرفت تو."
                         }, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
                     }
@@ -219,24 +223,10 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                         mealLog = mealLog + value
                         prefs.edit().putString("meals_today", mealLog.joinToString("|")).apply()
                     })
-                    Tab.SLEEP -> {
-                        SectionTitle("خواب شبانه", "مدت و کیفیت استراحتت رو ثبت کن")
-                        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(Ink).padding(22.dp)) {
-                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text("SLEEP DURATION", color = Lime, fontSize = 10.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
-                                Text(sleep.toInt().toString() + " ساعت", color = Color.White, fontSize = 42.sp, fontWeight = FontWeight.Black)
-                                Slider(value = sleep, onValueChange = { sleep = it; prefs.edit().putFloat("sleep_hours", it).apply() }, valueRange = 0f..12f, steps = 23,
-                                    colors = SliderDefaults.colors(thumbColor = Lime, activeTrackColor = Lime, inactiveTrackColor = Color.DarkGray))
-                                Text("مدت خواب رو با کشیدن نوار تنظیم کن.", color = Color.LightGray, fontSize = 12.sp)
-                            }
-                        }
-                        Text("کیفیت خواب", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Ink)
-                        var quality by remember { mutableStateOf(prefs.getString("sleep_quality", "خوب") ?: "خوب") }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf("ضعیف", "معمولی", "خوب", "عالی").forEach { q ->
-                                FilterChip(selected = quality == q, onClick = { quality = q; prefs.edit().putString("sleep_quality", q).apply() }, label = { Text(q) })
-                            }
-                        }
+                    Tab.ROUTINE -> {
+                        RoutinePanel(sleep, { sleep = it; prefs.edit().putFloat("sleep_hours", it).apply() },
+                            weight.replace(",", ".").toDoubleOrNull()?.coerceIn(30.0, 250.0) ?: 70.0,
+                            workoutLog, { record -> workoutLog = workoutLog + record; prefs.edit().putString("workout_log_today", workoutLog.joinToString("\n")).apply() })
                     }
                     Tab.PROFILE -> {
                         SectionTitle("پروفایل", "اطلاعات شخصی و داده‌ها")
@@ -402,6 +392,96 @@ private fun DashboardMini(title: String, value: String, unit: String, icon: andr
         Icon(if(tracking) Icons.Default.Stop else Icons.Default.PlayArrow, null)
         Spacer(Modifier.width(8.dp))
         Text(if(tracking) "پایان فعالیت" else "شروع ثبت فعالیت", fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun RoutinePanel(
+    sleep: Float, onSleepChange: (Float) -> Unit, weightKg: Double,
+    workoutLog: List<String>, onAddWorkout: (String) -> Unit
+) {
+    val workouts = listOf(
+        Triple("کشش کل بدن", 2.5, "حرکات آرام برای گردن، شانه، پشت و پاها"),
+        Triple("انعطاف و کشش عمیق", 2.8, "کشش کنترل‌شده عضلات اصلی بدن"),
+        Triple("گرم‌کردن و تحرک مفاصل", 3.0, "حرکت نرم مفاصل و آماده‌سازی بدن"),
+        Triple("یوگای سبک در خانه", 2.5, "تعادل، تنفس و انعطاف"),
+        Triple("فول‌بادی سبک بدون وسیله", 3.5, "اسکوات، پل باسن، شنا روی دیوار و پلانک"),
+        Triple("فول‌بادی متوسط بدون وسیله", 5.0, "اسکوات، لانج، شنا و تمرین میان‌تنه"),
+        Triple("تمرین شکم و میان‌تنه", 3.8, "پلانک، دِدباگ و کرانچ کنترل‌شده")
+    )
+    var selected by remember { mutableStateOf(workouts[0].first) }
+    var minutes by remember { mutableStateOf("15") }
+    val selectedWorkout = workouts.first { it.first == selected }
+    val duration = minutes.toIntOrNull()?.coerceIn(1, 180) ?: 0
+    val estimated = selectedWorkout.second * 3.5 * weightKg / 200.0 * duration
+    val totalBurned = workoutLog.sumOf { it.substringAfterLast("|", "0").toDoubleOrNull() ?: 0.0 }
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        SectionTitle("روتین روزانه", "تمرین، خواب و مراقبت‌های روزمره")
+        Card(colors = CardDefaults.cardColors(containerColor = Ink), shape = RoundedCornerShape(24.dp)) {
+            Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("کالری سوزانده‌شده با تمرین خانگی", color = Color.LightGray, fontSize = 12.sp)
+                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(totalBurned.toInt().toString(), color = Lime, fontSize = 38.sp, fontWeight = FontWeight.Black)
+                    Text("kcal امروز", color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(bottom = 7.dp))
+                }
+                Text("برآورد بر اساس نوع تمرین، مدت و وزن پروفایل", color = Color.LightGray, fontSize = 10.sp)
+            }
+        }
+        SectionTitle("تمرین‌های قابل ثبت", "بدون باشگاه و با وزن بدن")
+        workouts.forEach { item ->
+            val active = selected == item.first
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(17.dp)).background(if (active) Color(0xFFEAF2D4) else Color.White)
+                .clickable { selected = item.first }.padding(14.dp), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                Box(Modifier.size(40.dp).clip(CircleShape).background(if (active) Lime else Color(0xFFF0F2EC)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.FitnessCenter, null, tint = Ink)
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(item.first, color = Ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(item.third, color = Muted, fontSize = 10.sp)
+                }
+                if (active) Icon(Icons.Default.CheckCircle, null, tint = Ink)
+            }
+        }
+        OutlinedTextField(value = minutes, onValueChange = { minutes = it.filter(Char::isDigit).take(3) },
+            label = { Text("مدت تمرین (دقیقه)") }, suffix = { Text("min") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp)) {
+            Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("کالری تخمینی این تمرین", color = Muted, fontSize = 11.sp)
+                    Text("${estimated.toInt().coerceAtLeast(0)} kcal", color = Ink, fontSize = 27.sp, fontWeight = FontWeight.Black)
+                }
+                Text("${selectedWorkout.second} MET", color = Muted, fontSize = 11.sp)
+            }
+        }
+        Button(onClick = { if (duration > 0) onAddWorkout("${selectedWorkout.first}|$duration|${estimated.toInt()}") },
+            enabled = duration > 0, modifier = Modifier.fillMaxWidth().height(54.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = RoundedCornerShape(17.dp)) {
+            Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text("ثبت تمرین و افزودن کالری")
+        }
+        if (workoutLog.isNotEmpty()) {
+            SectionTitle("تمرین‌های ثبت‌شده امروز", "${workoutLog.size} جلسه")
+            workoutLog.asReversed().forEach { entry ->
+                val parts = entry.split("|")
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp)).background(Color.White).padding(13.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(parts.getOrNull(0) ?: "تمرین", color = Ink, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                        Text("${parts.getOrNull(1) ?: "0"} دقیقه", color = Muted, fontSize = 10.sp)
+                    }
+                    Text("${parts.getOrNull(2) ?: "0"} kcal", color = Ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+            }
+        }
+        HorizontalDivider(color = Color(0xFFE7E9E3))
+        SectionTitle("خواب شبانه", "مدت استراحتت را ثبت کن")
+        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(22.dp)) {
+            Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("${sleep.toInt()} ساعت", color = Ink, fontSize = 32.sp, fontWeight = FontWeight.Black)
+                Slider(value = sleep, onValueChange = onSleepChange, valueRange = 0f..12f, steps = 23,
+                    colors = SliderDefaults.colors(thumbColor = Lime, activeTrackColor = Ink))
+            }
+        }
     }
 }
 
