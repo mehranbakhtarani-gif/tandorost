@@ -7,6 +7,7 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.os.PowerManager
 import org.json.JSONArray
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -18,6 +19,7 @@ class TrackingService : Service(), LocationListener {
     private var last: Location? = null
     private var startedAt = 0L
     private var lastAcceptedAt = 0L
+    private var wakeLock: PowerManager.WakeLock? = null
     override fun onCreate() {
         super.onCreate()
         val prefs = getSharedPreferences("mfit_native", MODE_PRIVATE)
@@ -26,6 +28,10 @@ class TrackingService : Service(), LocationListener {
         lastAcceptedAt = now
         distance = prefs.getFloat("live_distance", 0f)
         last = null
+        wakeLock = (getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:activity-tracking").apply {
+            setReferenceCounted(false)
+            acquire()
+        }
         val channel = "mfit_activity"
         if (Build.VERSION.SDK_INT >= 26) getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(channel, "ثبت فعالیت", NotificationManager.IMPORTANCE_LOW))
         val stopIntent = PendingIntent.getService(
@@ -78,6 +84,8 @@ class TrackingService : Service(), LocationListener {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int { if (intent?.action == "STOP") { stopSelf(); return START_NOT_STICKY }; return START_STICKY }
     override fun onDestroy() {
         try { manager.removeUpdates(this) } catch (_: Exception) {}
+        try { if (wakeLock?.isHeld == true) wakeLock?.release() } catch (_: Exception) {}
+        wakeLock = null
         val p = getSharedPreferences("mfit_native", MODE_PRIVATE)
         val meters = p.getFloat("live_distance", 0f); val seconds = p.getLong("live_seconds", 0L)
         if (meters > 0f) {
