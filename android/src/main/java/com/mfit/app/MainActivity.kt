@@ -372,7 +372,7 @@ private fun DashboardMini(title: String, value: String, unit: String, icon: andr
             })
             Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(if (routePoints.isEmpty()) "نقشه آماده ثبت مسیر" else "${routePoints.size} نقطه ثبت‌شده", fontSize = 12.sp, color = Muted)
-                Text(if (tracking) "GPS فعال" else "OpenStreetMap", fontSize = 11.sp, color = if (tracking) Color(0xFF43834B) else Muted, fontWeight = FontWeight.Bold)
+                Text("© OpenStreetMap contributors", fontSize = 10.sp, color = Muted)
             }
         }
     }
