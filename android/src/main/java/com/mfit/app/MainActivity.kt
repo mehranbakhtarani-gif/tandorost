@@ -106,6 +106,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
     var workoutLog by remember { mutableStateOf(listOf<String>()) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { context.getSharedPreferences("mfit_native", Context.MODE_PRIVATE) }
+    val workoutCaloriesToday = workoutLog.sumOf { it.substringAfterLast("|", "0").toIntOrNull() ?: 0 }
     LaunchedEffect(Unit) {
         water = prefs.getInt("water_today", 0)
         val dayKey = java.time.LocalDate.now().toString()
@@ -182,6 +183,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                             DashboardMini("خواب", sleep.toInt().toString(), "ساعت", Icons.Default.Bedtime, Modifier.weight(1f))
                             DashboardMini("وزن", weight, "کیلوگرم", Icons.Default.MonitorWeight, Modifier.weight(1f))
                         }
+                        DashboardStat("کالری سوزانده‌شده با تمرین امروز", workoutCaloriesToday.toString(), "کیلوکالری", Icons.Default.LocalFireDepartment, Modifier.fillMaxWidth())
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Button(
                                 onClick = { water++; prefs.edit().putInt("water_today", water).apply() },
