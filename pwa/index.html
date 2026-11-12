@@ -145,6 +145,37 @@ body{background:radial-gradient(ellipse at 8% 0%,rgba(91,205,166,.16),transparen
 .activity-mode .mode-icon{margin:0 auto 7px;width:43px;height:43px;border-radius:15px}
 @media(max-width:370px){.quick-grid{gap:5px}.quick-grid button{font-size:9px}.quick-icon{width:34px;height:34px}}
 
+
+/* TANDOROST — immersive photo backgrounds per section */
+#appRoot{position:relative;isolation:isolate}
+#appRoot>.tab{position:relative;isolation:isolate;min-height:calc(100dvh - 128px);padding:1px 0 18px}
+#appRoot>.tab::before{content:"";position:absolute;z-index:-2;inset:-15px -16px 0;background-position:center top;background-size:cover;background-repeat:no-repeat;opacity:1;pointer-events:none}
+#appRoot>.tab::after{content:"";position:absolute;z-index:-1;inset:-15px -16px 0;pointer-events:none;background:linear-gradient(180deg,rgba(8,26,42,.22) 0%,rgba(8,26,42,.08) 30%,rgba(8,26,42,.36) 100%)}
+#home::before{background-image:url('https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1000&q=82');background-position:center 42%}
+#walk::before{background-image:url('https://images.unsplash.com/photo-1552674605-db6ffd4facb5?auto=format&fit=crop&w=1000&q=82');background-position:center 35%}
+#food::before{background-image:url('https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1000&q=82');background-position:center 40%}
+#routine::before{background-image:url('https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=1000&q=82');background-position:center 45%}
+#exercise::before{background-image:url('https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1000&q=82');background-position:center 45%}
+#progress::before{background-image:url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1000&q=82');background-position:center 50%}
+#profile::before{background-image:url('https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1000&q=82');background-position:center 48%}
+#appRoot>.tab::after{background:linear-gradient(180deg,rgba(9,27,42,.12),rgba(9,27,42,.24) 45%,rgba(9,27,42,.48))}
+#appRoot>.tab .card,#appRoot>.tab .stat,#appRoot>.tab .profile-menu-item{background:rgba(255,255,255,.78)!important;border-color:rgba(255,255,255,.58)!important;box-shadow:0 12px 32px rgba(7,31,48,.16),inset 0 1px 0 rgba(255,255,255,.78)!important;backdrop-filter:blur(24px) saturate(155%);-webkit-backdrop-filter:blur(24px) saturate(155%)}
+#appRoot>.tab .card h2,#appRoot>.tab .profile-menu-item b{color:#203541!important}
+#appRoot>.tab .sub,#appRoot>.tab .muted,#appRoot>.tab .profile-menu-item small{color:#607985!important}
+#appRoot>.tab .profile-hero{background:rgba(255,255,255,.8)!important}
+#appRoot>.tab .activity-mode{background:rgba(255,255,255,.72)!important;border-color:rgba(255,255,255,.65)!important;backdrop-filter:blur(16px)}
+#appRoot>.tab .activity-mode.active{background:linear-gradient(140deg,rgba(205,247,229,.94),rgba(220,241,251,.94))!important}
+#appRoot>.tab .triple>div{background:rgba(255,255,255,.78)!important;border-color:rgba(255,255,255,.68)!important}
+#appRoot>.tab .triple b{color:#203541!important}
+#appRoot>.tab .listitem{border-color:rgba(255,255,255,.52)!important}
+#appRoot>.tab .input{background:rgba(255,255,255,.86)!important}
+#appRoot>.tab .notice{background:rgba(255,249,235,.88)!important}
+#appRoot>.tab .map-shell{box-shadow:0 12px 30px rgba(7,31,48,.18)!important}
+#appRoot>.tab .sectionhead h2{color:#fff!important;text-shadow:0 2px 10px rgba(0,0,0,.25)}
+#appRoot>.tab .profile-menu-item.active{background:linear-gradient(110deg,rgba(218,248,235,.94),rgba(255,255,255,.88))!important}
+@media(prefers-reduced-motion:no-preference){#appRoot>.tab::before{animation:tabPhotoIn .55s ease both}@keyframes tabPhotoIn{from{transform:scale(1.025);opacity:.7}to{transform:scale(1);opacity:1}}}
+@media(max-width:370px){#appRoot>.tab::before,#appRoot>.tab::after{inset:-12px -12px 0}}
+
 </style></head>
 <body><main class="app home-mode" id="appRoot">
 <header><div class="brand"><small id="today"></small><h1>تندرست</h1><small>قدم‌های کوچک، حال بهتر 🌱</small></div><div class="header-actions"><button class="install-btn" id="installBtn" hidden>نصب اپ</button><button class="iconbtn" id="themeBtn" aria-label="تغییر پوسته">☾</button></div></header>
