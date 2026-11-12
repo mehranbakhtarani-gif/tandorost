@@ -48,7 +48,7 @@ class TrackingService : Service(), LocationListener {
         }
         val prefs = getSharedPreferences("mfit_native", MODE_PRIVATE)
         val route = try { JSONArray(prefs.getString("route_points", "[]")) } catch (_: Exception) { JSONArray() }
-        if (accepted && (route.length() == 0 || route.length() % 3 == 0 || route.length() < 2)) {
+        if (accepted && route.length() % 3 == 0) {
             route.put(JSONArray().put(location.latitude).put(location.longitude))
         }
         val elapsed = (now - startedAt) / 1000
