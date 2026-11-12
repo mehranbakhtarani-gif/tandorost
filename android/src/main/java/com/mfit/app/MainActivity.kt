@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
     private var liveDistance by mutableFloatStateOf(0f)
     private var liveSeconds by mutableLongStateOf(0L)
     private var routePoints by mutableStateOf<List<Pair<Double, Double>>>(emptyList())
+    private var activityHistory by mutableStateOf<List<String>>(emptyList())
     private var lastActivity by mutableStateOf("—")
     private var imported by mutableStateOf(false)
     private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
@@ -67,7 +68,7 @@ class MainActivity : ComponentActivity() {
         imported = prefs.getBoolean("legacy_imported", false)
         val filter = IntentFilter("com.mfit.app.TRACK_UPDATE")
         if (Build.VERSION.SDK_INT >= 33) { registerReceiver(receiver, filter, RECEIVER_NOT_EXPORTED) } else { registerReceiver(receiver, filter) }
-        setContent { MFitApp(tracking, liveDistance, liveSeconds, lastActivity, imported, routePoints, 
+        setContent { MFitApp(tracking, liveDistance, liveSeconds, lastActivity, imported, routePoints, activityHistory, 
             onStart = { requestTracking() }, onStop = { stopTracking() },
             onImport = { importLauncher.launch(arrayOf("application/json", "text/*")) }) }
     }
@@ -76,6 +77,7 @@ class MainActivity : ComponentActivity() {
         liveSeconds = prefs.getLong("live_seconds", 0L)
         routePoints = try { val a = JSONArray(prefs.getString("route_points", "[]")); (0 until a.length()).mapNotNull { i -> val p = a.optJSONArray(i); if (p != null && p.length() >= 2) p.getDouble(0) to p.getDouble(1) else null } } catch (_: Exception) { emptyList() }
         tracking = prefs.getBoolean("tracking_active", false)
+        activityHistory = try { val a = JSONArray(prefs.getString("activity_history", "[]")); (0 until a.length()).mapNotNull { i -> a.optString(i).takeIf { it.isNotBlank() } } } catch (_: Exception) { emptyList() }
         lastActivity = prefs.getString("last_activity", "—") ?: "—"
     }
     private fun requestTracking() {
@@ -93,7 +95,7 @@ private enum class Tab(val label: String) { HOME("خانه"), ACTIVITY("فعال
 
 @Composable
 private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActivity: String, imported: Boolean, routePoints: List<Pair<Double, Double>>,
-                    onStart: () -> Unit, onStop: () -> Unit, onImport: () -> Unit) {
+                    onStart: () -> Unit, onStop: () -> Unit, onImport: () -> Unit, activityHistory: List<String>) {
     var tab by remember { mutableStateOf(Tab.HOME) }
     var water by remember { mutableIntStateOf(0) }
     var meal by remember { mutableStateOf("") }
@@ -209,7 +211,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                         }
                     }
                     Tab.ACTIVITY -> {
-                        ActivityPanel(tracking, distance, seconds, routePoints, onStart, onStop)
+                        ActivityPanel(tracking, distance, seconds, routePoints, activityHistory, onStart, onStop)
                         SectionTitle("آخرین رکورد", "فعالیت ذخیره‌شده")
                         DashboardStat("مسافت آخرین فعالیت", lastActivity, "کیلومتر", Icons.Default.Route, Modifier.fillMaxWidth())
                     }
@@ -336,7 +338,7 @@ private fun DashboardMini(title: String, value: String, unit: String, icon: andr
     }
 }
 
-@Composable private fun ActivityPanel(tracking: Boolean, distance: Float, seconds: Long, routePoints: List<Pair<Double, Double>>, onStart: () -> Unit, onStop: () -> Unit) {
+@Composable private fun ActivityPanel(tracking: Boolean, distance: Float, seconds: Long, routePoints: List<Pair<Double, Double>>, activityHistory: List<String>, onStart: () -> Unit, onStop: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val mapView = remember {
         Configuration.getInstance().userAgentValue = context.packageName
@@ -382,6 +384,18 @@ private fun DashboardMini(title: String, value: String, unit: String, icon: andr
         Metric("مسافت", "%.2f".format(distance / 1000f), "کیلومتر", Modifier.weight(1f))
         Metric("زمان", "%02d:%02d".format(seconds / 60, seconds % 60), "دقیقه:ثانیه", Modifier.weight(1f))
     }
+    if (activityHistory.isNotEmpty()) {
+        SectionTitle("سابقه فعالیت‌ها", "آخرین فعالیت‌های ثبت‌شده با GPS")
+        activityHistory.take(7).forEach { item ->
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White).padding(13.dp),
+                horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(item.substringBefore("|"), fontSize = 12.sp, color = Ink, fontWeight = FontWeight.SemiBold)
+                Text(item.substringAfter("|", ""), fontSize = 11.sp, color = Muted)
+            }
+        }
+    } else {
+        Text("بعد از پایان اولین فعالیت، سابقه‌اش اینجا نمایش داده می‌شود.", color = Muted, fontSize = 11.sp)
+    }
     Button(onClick = if(tracking) onStop else onStart, modifier = Modifier.fillMaxWidth().height(58.dp),
         colors = ButtonDefaults.buttonColors(containerColor = if(tracking) Color(0xFFB3261E) else Lime, contentColor = Ink),
         shape = RoundedCornerShape(18.dp)) {
@@ -391,7 +405,7 @@ private fun DashboardMini(title: String, value: String, unit: String, icon: andr
     }
 }
 
-private data class Food(val name: String, val kcal: Double, val protein: Double, val carbs: Double, val sugar: Double, val fat: Double, val fiber: Double)
+private data class Food(val name: String, val kcal: Double, val protein: Double, val carbs: Double, val sugar: Double, val fat: Double, val fiber: Double, val portions: List<Pair<String, Double>> = listOf("۱۰۰ گرم" to 100.0))
 private val foods = listOf(
     Food("تخم مرغ کامل",155.0,13.0,1.1,1.1,11.0,0.0),
     Food("سفیده تخم مرغ",52.0,10.9,0.7,0.7,0.2,0.0),
@@ -412,12 +426,29 @@ private val foods = listOf(
     Food("جو دوسر خشک",389.0,16.9,66.3,0.9,6.9,10.6),
     Food("شیر کم چرب",42.0,3.4,5.0,5.0,1.0,0.0),
     Food("پنیر فتا",264.0,14.2,4.1,4.1,21.3,0.0),
-    Food("روغن زیتون",884.0,0.0,0.0,0.0,100.0,0.0)
+    Food("روغن زیتون",884.0,0.0,0.0,0.0,100.0,0.0),
+    Food("نان بربری",275.0,9.0,56.0,2.5,1.2,2.7, listOf("یک کف دست" to 30.0,"یک چهارم نان" to 75.0)),
+    Food("نان لواش",290.0,9.0,57.0,2.0,1.5,2.0, listOf("یک ورق" to 25.0,"دو ورق" to 50.0)),
+    Food("برنج کته پخته",130.0,2.7,28.2,0.1,0.3,0.4, listOf("نصف لیوان" to 80.0,"یک لیوان" to 160.0,"یک کفگیر" to 150.0)),
+    Food("قرمه سبزی",145.0,8.0,8.0,2.0,9.0,3.0, listOf("یک ملاقه" to 180.0,"یک بشقاب کوچک" to 250.0)),
+    Food("خورش قیمه",155.0,8.0,13.0,2.0,8.0,2.5, listOf("یک ملاقه" to 180.0,"یک بشقاب کوچک" to 250.0)),
+    Food("کباب کوبیده",265.0,18.0,2.0,0.5,21.0,0.0, listOf("یک سیخ متوسط" to 100.0,"نصف سیخ" to 50.0)),
+    Food("جوجه کباب",165.0,29.0,1.0,0.5,4.0,0.0, listOf("یک سیخ" to 150.0,"نصف سیخ" to 75.0)),
+    Food("عدس پلو پخته",155.0,5.5,29.0,1.0,2.0,3.5, listOf("یک کفگیر" to 150.0,"یک لیوان" to 180.0)),
+    Food("لوبیا پلو پخته",165.0,5.0,27.0,2.0,4.0,3.0, listOf("یک کفگیر" to 150.0,"یک لیوان" to 180.0)),
+    Food("ماکارونی پخته",158.0,5.8,30.9,0.6,0.9,1.8, listOf("یک لیوان" to 140.0,"یک بشقاب" to 250.0)),
+    Food("آش رشته",95.0,4.5,14.0,1.5,2.5,3.5, listOf("یک کاسه متوسط" to 300.0,"نصف کاسه" to 150.0)),
+    Food("کشک بادمجان",165.0,6.0,10.0,3.0,11.0,3.0, listOf("سه قاشق غذاخوری" to 90.0,"یک پیاله" to 180.0)),
+    Food("میرزا قاسمی",105.0,4.0,8.0,4.0,6.0,3.0, listOf("سه قاشق غذاخوری" to 90.0,"یک پیاله" to 180.0)),
+    Food("املت گوجه",115.0,6.0,4.0,2.5,8.0,1.0, listOf("یک بشقاب کوچک" to 200.0,"نصف بشقاب" to 100.0)),
+    Food("خوراک لوبیا چیتی",125.0,7.5,20.0,2.0,1.5,7.0, listOf("یک کاسه" to 250.0,"نصف کاسه" to 125.0)),
+    Food("سالاد شیرازی",25.0,1.0,5.0,3.0,0.2,1.5, listOf("یک کاسه" to 180.0,"نصف کاسه" to 90.0))
 )
 
 @Composable private fun FoodPanel(meal: String, onMeal: (String) -> Unit, amount: String, onAmount: (String) -> Unit,
                                   log: List<String>, onAdd: (String) -> Unit) {
     var selected by remember { mutableStateOf<Food?>(null) }
+    var portion by remember { mutableStateOf<String?>(null) }
     val grams = (amount.replace(',', '.').toDoubleOrNull() ?: 0.0).coerceIn(0.0, 5000.0)
     val factor = grams / 100.0
     val matches = if (meal.isBlank()) foods.take(6) else foods.filter { it.name.contains(meal.trim(), ignoreCase = true) }.take(7)
@@ -443,14 +474,22 @@ private val foods = listOf(
             matches.forEach { food ->
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp))
                     .background(if(selected == food) Color(0xFFEAF2D4) else Color.White)
-                    .clickable { selected = food; onMeal(food.name) }.padding(horizontal = 13.dp, vertical = 11.dp),
+                    .clickable { selected = food; onMeal(food.name); portion = null }.padding(horizontal = 13.dp, vertical = 11.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(food.name, fontSize = 13.sp, fontWeight = if(selected == food) FontWeight.Bold else FontWeight.Medium, color = Ink)
                     Text("${food.kcal.toInt()} kcal / 100g", fontSize = 11.sp, color = Muted)
                 }
             }
         }
-        OutlinedTextField(value = amount, onValueChange = onAmount, label = { Text("مقدار مصرف‌شده (گرم)") },
+        if (selected != null) {
+            Text("اندازه‌های معمول این غذا", color = Muted, fontSize = 12.sp)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                selected!!.portions.forEach { (label, g) ->
+                    FilterChip(selected = portion == label, onClick = { portion = label; onAmount(g.toInt().toString()) }, label = { Text(label) })
+                }
+            }
+        }
+        OutlinedTextField(value = amount, onValueChange = { onAmount(it); portion = null }, label = { Text("مقدار مصرف‌شده (گرم)") },
             modifier = Modifier.fillMaxWidth(), singleLine = true, suffix = { Text("g") })
         Card(colors = CardDefaults.cardColors(containerColor = Ink), shape = RoundedCornerShape(24.dp)) {
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
