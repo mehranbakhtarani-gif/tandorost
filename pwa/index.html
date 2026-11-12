@@ -1143,6 +1143,105 @@ body{
  #appRoot .card,#appRoot .stat,#appRoot .dash-card,#appRoot .weekly-card,#appRoot .task-card,#appRoot .profile-menu-item,#appRoot .activity-mode,#appRoot .exercise,#appRoot .listitem,#appRoot .triple>div,#appRoot .activity-stats>div,#appRoot .notice,#nav.bottomnav,#nav.bottomnav button .nav-icon{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(247,250,253,.97)!important}
 }
 
+
+/* MFit unified glass surfaces + refined mobile dashboard */
+:root{
+ --mfit-glass-ink:#183b58;
+ --mfit-glass-muted:#58758d;
+ --mfit-glass-fill:rgba(255,255,255,.57);
+ --mfit-glass-edge:rgba(255,255,255,.82);
+ --mfit-glass-shadow:0 12px 30px rgba(43,91,137,.12),inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1px 0 rgba(255,255,255,.25);
+}
+#appRoot .tab .card,
+#appRoot .tab .stat,
+#appRoot .tab .dash-card,
+#appRoot .tab .weekly-card,
+#appRoot .tab .task-card,
+#appRoot .tab .profile-hero,
+#appRoot .tab .profile-panel,
+#appRoot .tab .profile-menu-item,
+#appRoot .tab .activity-mode,
+#appRoot .tab .exercise,
+#appRoot .tab .listitem,
+#appRoot .tab .triple>div,
+#appRoot .tab .activity-stats>div,
+#appRoot .tab .notice,
+#appRoot .tab .share-activity,
+#appRoot .tab .quick-grid button{
+ background:linear-gradient(145deg,rgba(255,255,255,.78),rgba(235,246,255,.58) 55%,rgba(216,235,250,.48))!important;
+ color:var(--mfit-glass-ink)!important;
+ border:1px solid var(--mfit-glass-edge)!important;
+ box-shadow:var(--mfit-glass-shadow)!important;
+ -webkit-backdrop-filter:blur(24px) saturate(175%)!important;
+ backdrop-filter:blur(24px) saturate(175%)!important;
+}
+#appRoot .tab .card h2,#appRoot .tab .card h3,
+#appRoot .tab .dash-title,#appRoot .tab .weekly-head b,
+#appRoot .tab .profile-menu-item b,#appRoot .tab .activity-stats b,
+#appRoot .tab .triple b,#appRoot .tab .field label{color:#183b58!important}
+#appRoot .tab .card p,#appRoot .tab .card small,
+#appRoot .tab .sub,#appRoot .tab .muted,
+#appRoot .tab .weekly-head small,#appRoot .tab .weekly-meta,
+#appRoot .tab .profile-menu-item small,#appRoot .tab .listitem small,
+#appRoot .tab .empty,#appRoot .tab .todo-text{color:#58758d!important}
+#appRoot .tab .stat strong,#appRoot .tab .large-number,
+#appRoot .tab .value,#appRoot .tab .mini-ring strong{color:#183b58!important}
+#appRoot .tab .step-card{
+ background:linear-gradient(135deg,rgba(54,132,226,.82),rgba(91,178,235,.58))!important;
+ border-color:rgba(255,255,255,.82)!important;
+}
+#appRoot .tab .step-card *{color:#fff!important}
+#appRoot .tab .water-card{
+ background:linear-gradient(145deg,rgba(255,255,255,.78),rgba(206,239,251,.58))!important;
+}
+#appRoot .tab .water-card .dash-title,
+#appRoot .tab .water-card .water-unit,
+#appRoot .tab .water-card .mini-foot,
+#appRoot .tab .water-card .mini-foot b{color:#285572!important}
+#appRoot .welcome-weather{width:100%;margin:12px 0 15px}
+#appRoot .home-weather-chip{
+ width:100%;min-height:66px;display:flex;align-items:center;justify-content:flex-start;
+ gap:12px;padding:14px 17px;border-radius:22px;text-align:right;
+ background:linear-gradient(110deg,rgba(255,255,255,.82),rgba(218,239,252,.58))!important;
+ color:#214968!important;border:1px solid rgba(255,255,255,.9)!important;
+ box-shadow:0 12px 28px rgba(47,101,150,.12),inset 0 1px 0 #fff!important;
+ -webkit-backdrop-filter:blur(26px) saturate(180%)!important;backdrop-filter:blur(26px) saturate(180%)!important;
+}
+#appRoot .home-weather-chip #weatherHomeIcon{font-size:27px}
+#appRoot .home-weather-chip #weatherHomeText{flex:1;font-size:13px;font-weight:800;color:#214968!important}
+#appRoot .home-weather-chip .weather-chevron{font-size:21px;color:#5485a8}
+#appRoot header{gap:10px;align-items:center}
+#appRoot .header-actions{margin-inline-start:auto;display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:nowrap}
+#appRoot .header-actions .weather-chip{white-space:nowrap;min-width:0;padding:8px 10px;border-radius:14px;font-size:11px}
+#appRoot .header-actions .install-btn{white-space:nowrap;flex:0 0 auto;padding:9px 11px;min-width:max-content;border-radius:13px;font-size:11px}
+#appRoot .header-actions .iconbtn{flex:0 0 38px;width:38px;height:38px}
+#nav.bottomnav{
+ width:min(470px,calc(100% - 30px));padding:7px 9px;
+ border-radius:23px!important;background:rgba(248,252,255,.72)!important;
+ border:1px solid rgba(255,255,255,.92)!important;
+ box-shadow:0 12px 32px rgba(35,76,119,.16),inset 0 1px 0 #fff!important;
+ -webkit-backdrop-filter:blur(28px) saturate(185%)!important;backdrop-filter:blur(28px) saturate(185%)!important;
+}
+#nav.bottomnav button{padding:5px 2px;gap:4px;border-radius:15px;font-size:9px;color:#607b91!important;transition:background .18s ease,transform .18s ease}
+#nav.bottomnav button .nav-icon{width:31px!important;height:29px!important;border-radius:11px!important;box-shadow:0 4px 11px rgba(48,91,133,.11),inset 0 1px 0 #fff!important}
+#nav.bottomnav button.active{background:rgba(78,145,220,.12)!important;color:#2368ad!important;border:1px solid rgba(93,155,219,.16)!important}
+#nav.bottomnav button.active .nav-icon{background:linear-gradient(145deg,#8acbff,#4b91e3)!important;color:white!important}
+@media(max-width:390px){
+ #appRoot .brand h1{font-size:23px}
+ #appRoot .header-actions{gap:5px}
+ #appRoot .header-actions .weather-chip{padding:7px 8px;font-size:10px}
+ #appRoot .header-actions .install-btn{padding:8px 8px;font-size:10px}
+ #nav.bottomnav button{font-size:8px}
+}
+@media(prefers-reduced-transparency:reduce){
+ #appRoot .tab .card,#appRoot .tab .stat,#appRoot .tab .dash-card,
+ #appRoot .tab .weekly-card,#appRoot .tab .task-card,#appRoot .tab .profile-menu-item,
+ #appRoot .tab .activity-mode,#appRoot .tab .exercise,#appRoot .tab .listitem,
+ #appRoot .tab .triple>div,#appRoot .tab .activity-stats>div,#nav.bottomnav{
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:rgba(247,251,255,.97)!important
+ }
+}
+
 </style></head>
 <body><main class="app home-mode" id="appRoot">
 <header><div class="brand"><small id="today"></small><h1>MFit</h1><small>قدم‌های کوچک، حال بهتر 🌱</small></div><div class="header-actions"><button class="weather-chip" id="weatherHeader" type="button" aria-label="آب‌وهوا">🌤️ <span id="weatherHeaderText">آب‌وهوا</span></button><button class="install-btn" id="installBtn" hidden>نصب اپ</button><button class="iconbtn" id="themeBtn" aria-label="تغییر پوسته">☾</button></div></header>
