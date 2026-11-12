@@ -813,6 +813,145 @@ body{font-family:Tahoma,Arial,sans-serif!important;line-height:1.55}
 
 :root[data-theme=dark]{--bg:#f2f6fc;--surface:#fff;--surface2:#f3f6fb;--ink:#1c2c43;--muted:#718198;--line:#e2e9f2;--green:#3266e9;--green2:#e8efff;--blue:#398ce0;--shadow:0 8px 24px rgba(40,68,110,.07);--nav:rgba(255,255,255,.96);color-scheme:light}
 #appRoot>section.tab::before,#appRoot>section.tab::after{display:none!important;content:none!important}
+
+
+/* Tandorost — clean blue/white wellness dashboard, based on the selected health-dashboard reference */
+:root{
+ --bg:#f3f7fc;--surface:#fff;--surface2:#f1f5fb;--ink:#172b45;--muted:#8292a8;
+ --line:#e5edf6;--green:#2c70e8;--green2:#e8f1ff;--blue:#38a6df;--orange:#f2a84b;
+ --red:#e47772;--shadow:0 8px 26px rgba(40,83,137,.075);--nav:rgba(255,255,255,.96);color-scheme:light
+}
+:root[data-theme=dark]{--bg:#f3f7fc;--surface:#fff;--surface2:#f1f5fb;--ink:#172b45;--muted:#8292a8;--line:#e5edf6;--green:#2c70e8;--green2:#e8f1ff;--blue:#38a6df;--orange:#f2a84b;--shadow:0 8px 26px rgba(40,83,137,.075);--nav:rgba(255,255,255,.96);color-scheme:light}
+html{background:var(--bg);scroll-behavior:smooth}
+body{background:var(--bg)!important;color:var(--ink)!important;font-family:Tahoma,Arial,sans-serif;line-height:1.65}
+#appRoot.app,#appRoot.app.home-mode{
+ width:100%;max-width:520px;min-height:100dvh;margin:0 auto;padding:16px 16px calc(112px + env(safe-area-inset-bottom));
+ background:var(--bg)!important;color:var(--ink)!important;box-shadow:none!important;clip-path:none!important
+}
+#appRoot.app.home-mode{background:linear-gradient(180deg,#eaf3ff 0,#f3f7fc 225px,#f3f7fc 100%)!important}
+#appRoot>section.tab{display:none!important;min-width:0}
+#appRoot>section.tab.active{display:block!important;animation:td-enter .24s ease both}
+@keyframes td-enter{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+#appRoot header{display:flex;align-items:center;justify-content:space-between;margin:4px 2px 18px}
+#appRoot .brand h1{font-size:23px;color:var(--ink)}
+#appRoot .brand small{color:var(--muted)}
+#appRoot .welcome{padding:12px 3px 9px;color:var(--ink);align-items:center}
+#appRoot .welcome p{color:#6d84a2;font-size:12px}
+#appRoot .welcome h2{font-size:23px;color:#18395f;letter-spacing:-.3px}
+#appRoot .welcome small{color:#8092a9}
+#appRoot .avatar{width:46px;height:46px;background:#dceaff;color:#2867cf;border:2px solid #fff;box-shadow:0 5px 16px #366cb51c}
+#appRoot .welcome-weather{margin:0 0 13px}
+#appRoot .weather-chip{width:100%;display:flex;align-items:center;gap:9px;padding:11px 14px;border:1px solid #dce9fa;border-radius:17px;background:rgba(255,255,255,.78);color:#49627f;box-shadow:0 5px 18px #3265a10c;text-align:right}
+#appRoot .weather-chip #weatherHomeIcon{font-size:20px}
+#appRoot .weather-chevron{margin-right:auto;font-size:20px;color:#8ba4c3}
+#appRoot .home-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin:0 0 11px}
+#appRoot .dash-card,#appRoot .card,#appRoot .stat{
+ min-width:0;background:#fff!important;color:var(--ink)!important;border:1px solid var(--line)!important;border-radius:22px!important;
+ padding:15px!important;box-shadow:var(--shadow)!important;backdrop-filter:blur(16px)
+}
+#appRoot .dash-card{box-shadow:0 7px 22px rgba(43,85,139,.07)!important}
+#appRoot .dash-title{display:flex;align-items:center;gap:8px;color:#536b88;font-size:12px}
+#appRoot .dash-title span{width:29px;height:29px;border-radius:10px;display:grid;place-items:center;background:#edf4ff;font-size:16px}
+#appRoot .step-card{background:linear-gradient(145deg,#3279ed,#2864d5)!important;border:0!important;color:white!important;box-shadow:0 12px 28px rgba(43,104,211,.22)!important}
+#appRoot .step-card .dash-title,#appRoot .step-card .mini-foot,#appRoot .step-card>small{color:#e6efff!important}
+#appRoot .step-card .dash-title span{background:#ffffff24}
+#appRoot .step-card .mini-ring .ring-track{stroke:#ffffff38}
+#appRoot .step-card .mini-ring .ring-value{stroke:#fff}
+#appRoot .step-card .mini-ring strong,#appRoot .step-card .mini-ring small{color:#fff}
+#appRoot .step-card .tiny-progress{background:#ffffff38}
+#appRoot .step-card .tiny-progress i{background:#fff}
+#appRoot .mini-ring{width:118px;height:118px;margin:9px auto 5px}
+#appRoot .mini-ring circle{stroke-width:8}
+#appRoot .mini-ring strong{font-size:24px}
+#appRoot .water-card{background:linear-gradient(155deg,#fff,#f5fbff)!important}
+#appRoot .water-card .dash-title span{background:#e7f6ff}
+#appRoot .water-card .waterglass{height:91px;width:61px;border:2px solid #65bce7;border-radius:8px 8px 18px 18px;background:#edf9ff}
+#appRoot .water-card .waterglass i{background:linear-gradient(#69c9f2,#2698d1)}
+#appRoot .water-card .waterglass b{color:#23618b}
+#appRoot .water-unit{color:#6e8aa5}
+#appRoot .mini-foot{color:#8192a8;font-size:10px}
+#appRoot .mini-foot b{color:#49617d;font-size:11px}
+#appRoot .tiny-progress{height:6px;background:#e9eff7;border-radius:20px}
+#appRoot .tiny-progress i{background:#3b9de2}
+#appRoot .tiny-progress.orange i{background:#f1aa4c}
+#appRoot .second-grid .dash-card{min-height:112px}
+#appRoot .light-stat .dash-title{color:#71849c}
+#appRoot .light-stat .large-number{font-size:27px;color:#1d3c60;margin-top:5px}
+#appRoot .light-stat>small{color:#8b9aab}
+#appRoot .sectionhead{display:flex;align-items:center;justify-content:space-between;margin:18px 3px 9px;color:var(--ink)}
+#appRoot .sectionhead h2{font-size:15px;font-weight:800;color:#294565}
+#appRoot .pill{background:#eaf2ff;color:#5b78a0;padding:5px 10px}
+#appRoot .weekly-card{background:#fff!important;padding:15px!important}
+#appRoot .weekly-head b{font-size:13px;color:#35516f}
+#appRoot .weekly-head small{color:#93a2b4}
+#appRoot .weekly-icon{color:#4389e9}
+#appRoot .weekbars{height:100px}
+#appRoot .weekbars .barcol{color:#93a3b5}
+#appRoot .weekbars i{background:#9fc5fa}
+#appRoot .weekbars .todaybar{background:#3479e8}
+#appRoot .weekly-meta{color:#8192a8}
+#appRoot .weekly-meta b{color:#3a5879}
+#appRoot .task-card{padding:8px 14px!important}
+#appRoot .todo{border-color:#edf1f6}
+#appRoot .todo-text{color:#405875;font-size:12px}
+#appRoot .check{border-color:#cbd8e7}
+#appRoot .todo.done .check{background:#2c70e8;border-color:#2c70e8}
+#appRoot .quick-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+#appRoot .quick-grid button{min-width:0;min-height:83px;padding:10px 3px;border:1px solid #e4edf7;border-radius:17px;background:#fff;color:#58718e;box-shadow:0 5px 15px #294c7410;font-size:9px;line-height:1.4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px}
+#appRoot .quick-grid button .quick-icon{width:32px;height:32px;border-radius:11px;display:grid;place-items:center}
+#appRoot .quick-grid button .quick-icon svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#appRoot .quick-icon.mint{background:#e4f8f0;color:#27a77a}
+#appRoot .quick-icon.coral{background:#fff0ed;color:#e27b68}
+#appRoot .quick-icon.blue{background:#e7f5ff;color:#399bd3}
+#appRoot .quick-icon.violet{background:#f0edff;color:#8875d8}
+#appRoot .quick-icon.gold{background:#fff5e5;color:#d99a3e}
+#appRoot .app:not(.home-mode) header{display:flex}
+#appRoot .app:not(.home-mode) .card{background:#fff!important;color:var(--ink)!important}
+#appRoot .card h2,#appRoot .card h3{color:#294565}
+#appRoot .sub,#appRoot .muted{color:#8494a8!important}
+#appRoot .btn{min-height:43px;border-radius:14px;background:#2f70e5!important;color:#fff!important;box-shadow:0 5px 13px #2f70e51c!important;font-weight:700}
+#appRoot .btn.secondary{background:#edf4ff!important;color:#41699f!important;border:1px solid #dce8f8!important;box-shadow:none!important}
+#appRoot .btn.outline{background:#fff!important;color:#42648f!important;border:1px solid #dce6f2!important;box-shadow:none!important}
+#appRoot .btn.danger{background:#fff0ef!important;color:#b64c49!important;box-shadow:none!important}
+#appRoot button{max-width:100%;line-height:1.45}
+#appRoot .row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+#appRoot .row>.btn{flex:1 1 125px;min-width:0}
+#appRoot .twofields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#appRoot .field{min-width:0}
+#appRoot .input,#appRoot input,#appRoot select,#appRoot textarea{width:100%;max-width:100%;min-width:0;background:#f7f9fc!important;border:1px solid #e1e9f3!important;border-radius:13px!important;color:#2b405b!important;padding:11px 12px}
+#appRoot .input:focus,#appRoot input:focus,#appRoot select:focus{outline:2px solid #b9d3fa;outline-offset:1px}
+#appRoot .activity-modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#appRoot .activity-mode{min-width:0;padding:13px 9px;border-radius:17px;background:#f7faff!important;border:1px solid #e1eaf5!important;color:#365575!important}
+#appRoot .activity-mode.active{background:#edf4ff!important;border-color:#8eb6f3!important}
+#appRoot .activity-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important}
+#appRoot .activity-stats>div{min-width:0;background:#f4f8fd;border-radius:13px;padding:9px 5px}
+#appRoot .activity-stats b{font-size:12px;white-space:normal;color:#355575}
+#appRoot .triple{grid-template-columns:repeat(3,minmax(0,1fr))}
+#appRoot .map-shell{max-width:100%;overflow:hidden;border-radius:18px}
+#appRoot .real-map,#appRoot .leaflet-container{max-width:100%}
+#appRoot .notice{color:#806b48;background:#fff8e9;border:1px solid #f1e5ce;border-radius:14px}
+#appRoot .profile-menu{display:grid;gap:8px}
+#appRoot .profile-menu-item{width:100%;min-width:0;border:1px solid var(--line);border-radius:16px;background:#fff;color:#3a5675;padding:13px}
+#nav.bottomnav{position:fixed;z-index:50;left:50%;right:auto;bottom:calc(9px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(500px,calc(100% - 24px));max-width:calc(100% - 24px);display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:4px!important;padding:7px!important;border:1px solid #e2eaf4!important;border-radius:22px!important;background:rgba(255,255,255,.96)!important;box-shadow:0 10px 30px rgba(43,76,119,.15)!important;backdrop-filter:blur(18px)!important;-webkit-backdrop-filter:blur(18px)!important}
+#nav.bottomnav button{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0!important;min-height:52px;padding:5px 2px!important;border:0!important;border-radius:15px!important;background:transparent!important;color:#8091a7!important;font-size:10px!important;line-height:1.25!important;white-space:nowrap}
+#nav.bottomnav button .nav-icon{display:grid;place-items:center;width:28px;height:27px;background:transparent!important;color:inherit}
+#nav.bottomnav button .nav-icon svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#nav.bottomnav button.active{background:#eaf2ff!important;color:#2f70e5!important}
+.toast{z-index:100}
+@media(max-width:390px){
+ #appRoot.app,#appRoot.app.home-mode{padding-left:12px!important;padding-right:12px!important}
+ #appRoot .home-grid{gap:8px!important}
+ #appRoot .dash-card{padding:11px!important}
+ #appRoot .dash-title{font-size:10px}
+ #appRoot .mini-ring{width:100px;height:100px}
+ #appRoot .quick-grid{gap:5px!important}
+ #appRoot .quick-grid button{min-height:77px;padding:7px 2px!important;font-size:8px!important}
+ #nav.bottomnav{width:calc(100% - 18px);max-width:calc(100% - 18px);gap:2px!important}
+ #nav.bottomnav button{font-size:9px!important}
+}
+@media(min-width:700px){#appRoot.app{padding-top:24px!important}}
+@media(prefers-reduced-motion:reduce){#appRoot *,#nav *{animation:none!important;transition:none!important}}
+
 </style></head>
 <body><main class="app home-mode" id="appRoot">
 <header><div class="brand"><small id="today"></small><h1>تندرست</h1><small>قدم‌های کوچک، حال بهتر 🌱</small></div><div class="header-actions"><button class="weather-chip" id="weatherHeader" type="button" aria-label="آب‌وهوا">🌤️ <span id="weatherHeaderText">آب‌وهوا</span></button><button class="install-btn" id="installBtn" hidden>نصب اپ</button><button class="iconbtn" id="themeBtn" aria-label="تغییر پوسته">☾</button></div></header>
