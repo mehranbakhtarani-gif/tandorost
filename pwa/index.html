@@ -1287,6 +1287,115 @@ body{
 
 /* Compact weather lives in the home welcome row, not as a dashboard card */
 .welcome-copy{min-width:0}.welcome-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:5px}.welcome-meta>small{font-size:10px;color:#9db7c8}.welcome-meta .home-weather-chip{width:auto;min-height:28px;max-width:150px;padding:4px 8px;border-radius:12px;gap:5px;font-size:10px;background:rgba(100,175,198,.13);box-shadow:inset 0 1px rgba(255,255,255,.12)}.welcome-meta .weather-chevron{display:none}.welcome-meta #weatherHomeText{flex:initial;max-width:105px}
+
+/* MFIT ADIDAS RUNNING INSPIRED ATHLETIC REDESIGN v1 */
+:root{
+ --bg:#f4f5f2;--surface:#fff;--surface2:#f0f1ed;--ink:#111411;--muted:#70766f;--line:#e2e5df;
+ --green:#d7ff00;--green2:#e9ff82;--blue:#171b18;--orange:#e7a92c;--red:#d94d40;
+ --shadow:0 8px 24px rgba(17,24,16,.055);--nav:rgba(255,255,255,.96);color-scheme:light
+}
+:root[data-theme=dark]{
+ --bg:#101310;--surface:#1b201b;--surface2:#262c25;--ink:#f3f5ef;--muted:#a0a89d;--line:#343b32;
+ --green:#d7ff00;--green2:#35420a;--blue:#d7ff00;--orange:#f2bd55;--red:#ff8174;
+ --shadow:0 10px 28px rgba(0,0,0,.24);--nav:rgba(25,30,24,.96);color-scheme:dark
+}
+html,body{background:var(--bg)!important;color:var(--ink)!important}
+body{font-family:Tahoma,Arial,sans-serif!important;line-height:1.55}
+#appRoot.app,#appRoot.app.home-mode{max-width:520px;background:var(--bg)!important;color:var(--ink)!important;padding:14px 16px calc(116px + env(safe-area-inset-bottom))!important}
+#appRoot.app.home-mode{background:var(--bg)!important}
+#appRoot header{margin:5px 2px 18px}
+#appRoot .brand h1{font-size:25px;font-weight:950;letter-spacing:-1px;color:var(--ink)}
+#appRoot .brand h1:after{content:" / RUN";font-size:10px;letter-spacing:2px;font-weight:900;color:#73796e;margin-right:6px}
+#appRoot .brand small{color:var(--muted)}
+#appRoot .iconbtn,#appRoot .weather-chip{border-radius:12px;background:var(--surface)!important;border:1px solid var(--line)!important;color:var(--ink)!important;box-shadow:none!important;backdrop-filter:none!important}
+#appRoot .welcome{
+ position:relative;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
+ margin:4px 0 17px;padding:23px 20px 20px!important;min-height:166px;border-radius:25px;
+ overflow:hidden;background:#111510!important;color:#fff!important;
+ box-shadow:0 15px 30px rgba(12,18,10,.16)
+}
+#appRoot .welcome:before{content:"MOVE YOUR WAY";display:block;position:absolute;top:17px;left:20px;color:#d7ff00;font-size:9px;letter-spacing:3px;font-weight:900;direction:ltr}
+#appRoot .welcome:after{content:"";position:absolute;width:190px;height:190px;right:-88px;top:12px;border:1px solid rgba(215,255,0,.23);border-radius:50%;box-shadow:0 0 0 22px rgba(215,255,0,.035),0 0 0 45px rgba(215,255,0,.025);pointer-events:none}
+#appRoot .welcome-copy{position:relative;z-index:1;max-width:80%}
+#appRoot .welcome p{color:#b9c0b3!important;font-size:11px}
+#appRoot .welcome h2{font-size:25px!important;line-height:1.35;color:#fff!important;font-weight:950;letter-spacing:-.7px;margin:5px 0 9px}
+#appRoot .welcome small{color:#c0c8bb!important}
+#appRoot .welcome-meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+#appRoot .welcome .weather-chip{background:rgba(255,255,255,.09)!important;border:1px solid rgba(255,255,255,.16)!important;color:#f4f6ef!important;padding:5px 9px;border-radius:9px;box-shadow:none!important}
+#appRoot .avatar{width:43px;height:43px;border-radius:13px;background:#d7ff00!important;border:0!important;color:#111!important;font-weight:950;box-shadow:none!important;z-index:1}
+#appRoot .home-grid{gap:10px;margin-bottom:10px}
+#appRoot .dash-card,#appRoot .card,#appRoot .stat,#appRoot .weekly-card,#appRoot .task-card{
+ background:var(--surface)!important;color:var(--ink)!important;border:1px solid var(--line)!important;
+ border-radius:19px!important;box-shadow:var(--shadow)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important
+}
+#appRoot .dash-card{padding:14px!important}
+#appRoot .dash-title{color:var(--ink)!important;font-size:11px;font-weight:800}
+#appRoot .dash-title span{filter:none!important}
+#appRoot .mini-ring .ring-track{stroke:#e7e9e3!important}
+#appRoot .mini-ring .ring-value{stroke:#b7d900!important}
+#appRoot .mini-ring strong,#appRoot .mini-ring small{color:var(--ink)!important}
+#appRoot .mini-foot,#appRoot .mini-foot b{color:var(--muted)!important}
+#appRoot .large-number{color:var(--ink)!important;font-weight:950}
+#appRoot .tiny-progress{background:#e9ece5!important;border-radius:2px!important;height:5px}
+#appRoot .tiny-progress i{background:#b7d900!important;border-radius:2px!important}
+#appRoot .sectionhead{margin:21px 2px 10px}
+#appRoot .sectionhead h2{font-size:16px;font-weight:950;color:var(--ink)!important;letter-spacing:-.3px}
+#appRoot .pill,#appRoot .badge{background:var(--surface2)!important;color:var(--muted)!important;border:1px solid var(--line)!important;border-radius:8px!important}
+#appRoot .weekly-meta{color:var(--muted)!important}
+#appRoot .weekbars i{background:#b7d900!important;border-radius:3px 3px 0 0!important}
+#appRoot .weekbars .todaybar{background:#171b18!important}
+#appRoot .quick-grid{gap:7px!important}
+#appRoot .quick-grid button{background:var(--surface)!important;color:var(--ink)!important;border:1px solid var(--line)!important;border-radius:14px!important;box-shadow:none!important;font-weight:800}
+#appRoot .quick-icon{width:34px;height:34px;border-radius:10px;background:#171b18!important;color:#d7ff00!important;border:0!important;box-shadow:none!important}
+#appRoot .quick-icon svg{filter:none!important}
+#appRoot .card{padding:17px!important;margin-bottom:12px!important}
+#appRoot .card h2{font-size:16px;font-weight:950;color:var(--ink)!important}
+#appRoot .sub,#appRoot .muted{color:var(--muted)!important}
+#appRoot .btn{background:#d7ff00!important;color:#10140d!important;border:0!important;border-radius:11px!important;font-weight:950!important;box-shadow:none!important}
+#appRoot .btn.secondary{background:#171b18!important;color:#fff!important}
+#appRoot .btn.outline{background:transparent!important;color:var(--ink)!important;border:1px solid var(--line)!important}
+#appRoot .btn.danger{background:#fae5e1!important;color:#9c3028!important}
+#appRoot .input{background:var(--surface2)!important;color:var(--ink)!important;border:1px solid var(--line)!important;border-radius:10px!important}
+#appRoot .input:focus{border-color:#a9cb00!important;box-shadow:0 0 0 3px rgba(215,255,0,.18)}
+#appRoot .activity-modes{gap:9px}
+#appRoot .activity-mode{background:var(--surface)!important;color:var(--ink)!important;border:1px solid var(--line)!important;border-radius:14px!important;box-shadow:none!important}
+#appRoot .activity-mode.active{background:#171b18!important;color:#fff!important;border:1px solid #171b18!important}
+#appRoot .activity-mode.active b,#appRoot .activity-mode.active small{color:#fff!important}
+#appRoot .activity-mode.active .mode-icon{background:#d7ff00!important;color:#111!important}
+#appRoot .mode-icon{background:#eef0e9!important;color:#171b18!important;border:0!important;box-shadow:none!important}
+#appRoot .map-shell{height:285px;border-radius:17px!important;border:1px solid var(--line)!important;box-shadow:none!important}
+#appRoot .clock{font-size:54px;font-weight:950;letter-spacing:-2px;color:var(--ink)}
+#appRoot .activity-stats>div{background:var(--surface2)!important;border:1px solid var(--line);border-radius:11px!important}
+#appRoot .activity-stats b{color:var(--ink)!important;font-weight:950}
+#appRoot .activity-stats small{color:var(--muted)!important}
+#appRoot .triple div{background:var(--surface2)!important;border-radius:11px!important}
+#appRoot .bottomnav,#nav.bottomnav,body:has(#appRoot.home-mode) .bottomnav{
+ background:rgba(255,255,255,.97)!important;border:1px solid #e1e4dc!important;border-radius:17px!important;
+ box-shadow:0 10px 28px rgba(17,24,16,.12)!important;backdrop-filter:blur(18px)!important
+}
+:root[data-theme=dark] #appRoot .bottomnav,:root[data-theme=dark] #nav.bottomnav{background:rgba(25,30,24,.97)!important;border-color:var(--line)!important}
+#nav.bottomnav{width:min(490px,calc(100% - 24px));padding:6px!important;gap:3px}
+#nav.bottomnav button{color:#73796f!important;border-radius:12px!important;font-weight:800!important;font-size:10px!important;padding:7px 1px!important}
+#nav.bottomnav button.active{background:#d7ff00!important;color:#111!important}
+#nav .nav-icon{width:30px;height:25px;display:grid;place-items:center}
+#nav .nav-icon svg{width:21px;height:21px;stroke-width:2}
+#appRoot .profile-menu-item{background:var(--surface)!important;border:1px solid var(--line)!important;border-radius:14px!important;box-shadow:none!important}
+#appRoot .profile-menu-item.active{background:var(--surface2)!important;border-color:#b7d900!important}
+#appRoot .profile-avatar{background:#d7ff00!important;color:#111!important;border-radius:14px!important}
+#appRoot .notice{border-radius:11px!important}
+#appRoot .food-estimate{border-radius:14px!important}
+#appRoot .share-activity{border-radius:18px!important}
+#appRoot button,#appRoot .dash-card,#appRoot .card{transition:background-color .18s ease,border-color .18s ease,transform .18s ease}
+#appRoot button:active{transform:scale(.985)}
+@media(max-width:390px){
+ #appRoot.app,#appRoot.app.home-mode{padding-left:12px!important;padding-right:12px!important}
+ #appRoot .welcome{min-height:155px;padding:22px 16px 16px!important}
+ #appRoot .welcome h2{font-size:22px!important}
+ #appRoot .dash-card{padding:11px!important}
+ #appRoot .mini-ring{width:100px;height:100px}
+ #nav.bottomnav{width:calc(100% - 18px)}
+}
+@media(prefers-reduced-motion:reduce){#appRoot *,#nav *{transition:none!important;animation:none!important}}
 </style></head>
 <body><main class="app home-mode" id="appRoot">
 <header><div class="brand"><small id="today"></small><h1>MFit</h1><small>قدم‌های کوچک، حال بهتر 🌱</small></div><div class="header-actions"><button class="weather-chip" id="weatherHeader" type="button" aria-label="آب‌وهوا">🌤️ <span id="weatherHeaderText">آب‌وهوا</span></button><button class="install-btn" id="installBtn" hidden>نصب اپ</button><button class="iconbtn" id="themeBtn" aria-label="تغییر پوسته">☾</button></div></header>
