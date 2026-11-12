@@ -107,6 +107,13 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { context.getSharedPreferences("mfit_native", Context.MODE_PRIVATE) }
     val workoutCaloriesToday = workoutLog.sumOf { it.substringAfterLast("|", "0").toIntOrNull() ?: 0 }
+    LaunchedEffect(activityHistory.firstOrNull()) {
+        val today = java.time.LocalDate.now().toString()
+        if (prefs.getString("workout_log_date", "") != today) {
+            prefs.edit().putString("workout_log_date", today).putString("workout_log_today", "").apply()
+        }
+        workoutLog = prefs.getString("workout_log_today", "")?.split("\n")?.filter { it.isNotBlank() } ?: emptyList()
+    }
     LaunchedEffect(Unit) {
         water = prefs.getInt("water_today", 0)
         val dayKey = java.time.LocalDate.now().toString()
