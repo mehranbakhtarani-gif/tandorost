@@ -8,6 +8,9 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import org.json.JSONArray
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class TrackingService : Service(), LocationListener {
     private lateinit var manager: LocationManager
@@ -65,7 +68,17 @@ class TrackingService : Service(), LocationListener {
         try { manager.removeUpdates(this) } catch (_: Exception) {}
         val p = getSharedPreferences("mfit_native", MODE_PRIVATE)
         val meters = p.getFloat("live_distance", 0f); val seconds = p.getLong("live_seconds", 0L)
-        if (meters > 0f) p.edit().putString("last_activity", "%.2f".format(meters / 1000f)).putLong("last_activity_seconds", seconds).putFloat("live_distance", 0f).putLong("live_seconds", 0L).putBoolean("tracking_active", false).apply() else p.edit().putBoolean("tracking_active", false).apply()
+        if (meters > 0f) {
+            val date = SimpleDateFormat("yyyy/MM/dd  HH:mm", Locale.getDefault()).format(Date())
+            val history = try { JSONArray(p.getString("activity_history", "[]")) } catch (_: Exception) { JSONArray() }
+            val entry = "$date|%.2f km • %02d:%02d".format(Locale.US, meters / 1000f, seconds / 60, seconds % 60)
+            history.put(0, entry)
+            while (history.length() > 30) history.remove(history.length() - 1)
+            p.edit().putString("activity_history", history.toString())
+                .putString("last_activity", "%.2f".format(Locale.US, meters / 1000f))
+                .putLong("last_activity_seconds", seconds).putFloat("live_distance", 0f)
+                .putLong("live_seconds", 0L).putBoolean("tracking_active", false).apply()
+        } else p.edit().putBoolean("tracking_active", false).apply()
         sendBroadcast(Intent("com.mfit.app.TRACK_UPDATE").setPackage(packageName))
         super.onDestroy()
     }
