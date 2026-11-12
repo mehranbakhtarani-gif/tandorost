@@ -176,6 +176,20 @@ body{background:radial-gradient(ellipse at 8% 0%,rgba(91,205,166,.16),transparen
 @media(prefers-reduced-motion:no-preference){#appRoot>.tab::before{animation:tabPhotoIn .55s ease both}@keyframes tabPhotoIn{from{transform:scale(1.025);opacity:.7}to{transform:scale(1);opacity:1}}}
 @media(max-width:370px){#appRoot>.tab::before,#appRoot>.tab::after{inset:-12px -12px 0}}
 
+
+/* iOS-inspired native-feeling tab and control transitions */
+@media(prefers-reduced-motion:no-preference){
+ #appRoot>.tab.active.ios-tab-enter{animation:iosPageIn .48s cubic-bezier(.2,.82,.25,1) both}
+ @keyframes iosPageIn{0%{opacity:0;transform:translate3d(0,13px,0) scale(.988);filter:blur(2px)}55%{opacity:1;filter:blur(0)}100%{opacity:1;transform:translate3d(0,0,0) scale(1);filter:blur(0)}}
+ .bottomnav button{transition:background .28s cubic-bezier(.2,.8,.2,1),color .25s ease,transform .32s cubic-bezier(.2,.9,.25,1)}
+ .bottomnav button.active .nav-icon{animation:iosIconPop .38s cubic-bezier(.18,.9,.25,1.25) both}
+ @keyframes iosIconPop{0%{transform:scale(.84)}65%{transform:scale(1.09)}100%{transform:scale(1)}}
+ .btn,.activity-mode,.quick-grid button,.profile-menu-item,.iconbtn{transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .25s ease,background-color .25s ease}
+ .btn:active,.activity-mode:active,.quick-grid button:active,.profile-menu-item:active,.iconbtn:active{transform:scale(.97)}
+ #appRoot>.tab .card{transition:box-shadow .3s ease,border-color .3s ease}
+}
+@media(prefers-reduced-motion:reduce){#appRoot>.tab.active.ios-tab-enter{animation:none!important}}
+
 </style></head>
 <body><main class="app home-mode" id="appRoot">
 <header><div class="brand"><small id="today"></small><h1>تندرست</h1><small>قدم‌های کوچک، حال بهتر 🌱</small></div><div class="header-actions"><button class="install-btn" id="installBtn" hidden>نصب اپ</button><button class="iconbtn" id="themeBtn" aria-label="تغییر پوسته">☾</button></div></header>
@@ -233,7 +247,7 @@ let db;try{db={...fresh(),...JSON.parse(localStorage.getItem(KEY)||'{}')};db.pro
 const day=()=>{let k=today();if(!db.days[k])db.days[k]={water:0,meals:[],habits:{},sleep:'',mood:'',activityMinutes:0,steps:0};return db.days[k]};let D=day();let toastTimer;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){toast('فضای ذخیره‌سازی مرورگر کافی نیست')}}function toast(s){$('toast').textContent=s;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2300)}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function showTab(id){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.id===id));document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.tab===id));$('appRoot').classList.toggle('home-mode',id==='home');window.scrollTo({top:0,behavior:'smooth'});if(id==='progress')renderProgress();if(id==='profile')renderProfile();if(id==='exercise')renderWorkout();if(id==='walk'){if(window.tandorostMap)setTimeout(()=>window.tandorostMap.invalidateSize(),140);locateCurrentPosition()}}
+function showTab(id){const current=document.querySelector('.tab.active');if(current&&current.id===id)return;document.querySelectorAll('.tab').forEach(x=>{x.classList.toggle('active',x.id===id);if(x.id===id){x.classList.remove('ios-tab-enter');void x.offsetWidth;x.classList.add('ios-tab-enter')}});document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.tab===id));$('appRoot').classList.toggle('home-mode',id==='home');window.scrollTo({top:0,behavior:'smooth'});if(id==='progress')renderProgress();if(id==='profile')renderProfile();if(id==='exercise')renderWorkout();if(id==='walk'){if(window.tandorostMap)setTimeout(()=>window.tandorostMap.invalidateSize(),140);locateCurrentPosition()}}
 document.querySelectorAll('#nav button,[data-go]').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab||b.dataset.go)));
 $('today').textContent=new Date().toLocaleDateString('fa-IR',{weekday:'long',day:'numeric',month:'long'});$('dateHome').textContent=$('today').textContent;
 $('themeBtn').onclick=()=>{db.theme=db.theme==='dark'?'light':'dark';applyTheme();save()};function applyTheme(){document.documentElement.dataset.theme=db.theme||'light';$('themeBtn').textContent=db.theme==='dark'?'☀':'☾'}applyTheme();
