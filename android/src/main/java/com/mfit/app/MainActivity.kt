@@ -105,6 +105,8 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
     val prefs = remember { context.getSharedPreferences("mfit_native", Context.MODE_PRIVATE) }
     LaunchedEffect(Unit) {
         water = prefs.getInt("water_today", 0)
+        val dayKey = java.time.LocalDate.now().toString()
+        if (prefs.getString("meal_log_date", "") != dayKey) { prefs.edit().putString("meals_today", "").putString("meal_log_date", dayKey).apply() }
         mealLog = prefs.getString("meals_today", "")?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
         weight = prefs.getString("weight", "96") ?: "96"
         sleep = prefs.getFloat("sleep_hours", 8f)
@@ -429,6 +431,8 @@ private val foods = listOf(
     val todayProtein = log.sumOf { it.split(" • ").getOrNull(3)?.removeSuffix("g P")?.toDoubleOrNull() ?: 0.0 }
     val todayCarbs = log.sumOf { it.split(" • ").getOrNull(4)?.removeSuffix("g C")?.toDoubleOrNull() ?: 0.0 }
     val todayFat = log.sumOf { it.split(" • ").getOrNull(5)?.removeSuffix("g F")?.toDoubleOrNull() ?: 0.0 }
+    val todaySugar = log.sumOf { it.split(" • ").getOrNull(6)?.removeSuffix("g S")?.toDoubleOrNull() ?: 0.0 }
+    val todayFiber = log.sumOf { it.split(" • ").getOrNull(7)?.removeSuffix("g Fib")?.toDoubleOrNull() ?: 0.0 }
     Column(verticalArrangement = Arrangement.spacedBy(13.dp)) {
         SectionTitle("ثبت تغذیه", "مقدار را وارد کن؛ محاسبه خودکار انجام می‌شود")
         OutlinedTextField(value = meal, onValueChange = { onMeal(it); selected = foods.firstOrNull { f -> f.name.equals(it.trim(), true) } },
@@ -471,7 +475,7 @@ private val foods = listOf(
         }
         Button(onClick = {
             selected?.let { food ->
-                onAdd("${food.name} • ${grams.toInt()} g • ${kcal.toInt()} kcal • ${"%.1f".format(java.util.Locale.US, protein)}g P • ${"%.1f".format(java.util.Locale.US, carbs)}g C • ${"%.1f".format(java.util.Locale.US, fat)}g F")
+                onAdd("${food.name} • ${grams.toInt()} g • ${kcal.toInt()} kcal • ${"%.1f".format(java.util.Locale.US, protein)}g P • ${"%.1f".format(java.util.Locale.US, carbs)}g C • ${"%.1f".format(java.util.Locale.US, fat)}g F • ${"%.1f".format(java.util.Locale.US, sugar)}g S • ${"%.1f".format(java.util.Locale.US, fiber)}g Fib")
             }
         }, enabled = selected != null && grams > 0.0, modifier = Modifier.fillMaxWidth().height(54.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = RoundedCornerShape(17.dp)) {
@@ -485,6 +489,10 @@ private val foods = listOf(
                     NutrientValue("پروتئین", todayProtein, Ink)
                     NutrientValue("کربوهیدرات", todayCarbs, Ink)
                     NutrientValue("چربی", todayFat, Ink)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    NutrientValue("قند", todaySugar, Ink)
+                    NutrientValue("فیبر", todayFiber, Ink)
                 }
             }
         }
