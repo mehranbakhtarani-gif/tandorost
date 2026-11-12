@@ -86,7 +86,7 @@ class MainActivity : ComponentActivity() {
         val missing = permissions.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
         if (missing.isEmpty()) startTracking() else permissionLauncher.launch(missing.toTypedArray())
     }
-    private fun startTracking() { prefs.edit().putFloat("live_distance", 0f).putLong("live_seconds", 0L).putString("route_points", "[]").putBoolean("tracking_active", true).apply(); refreshTrack(); ContextCompat.startForegroundService(this, Intent(this, TrackingService::class.java)); tracking = true }
+    private fun startTracking() { prefs.edit().putFloat("live_distance", 0f).putLong("live_seconds", 0L).putLong("session_started_at", System.currentTimeMillis()).putString("route_points", "[]").putBoolean("tracking_active", true).apply(); refreshTrack(); ContextCompat.startForegroundService(this, Intent(this, TrackingService::class.java)); tracking = true }
     private fun stopTracking() { stopService(Intent(this, TrackingService::class.java)); tracking = false; prefs.edit().putBoolean("tracking_active", false).apply(); refreshTrack() }
     override fun onDestroy() { unregisterReceiver(receiver); super.onDestroy() }
 }
