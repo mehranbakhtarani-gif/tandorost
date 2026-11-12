@@ -61,6 +61,7 @@ class TrackingService : Service(), LocationListener {
             last = location
             lastAcceptedAt = now
         }
+        val prefs = getSharedPreferences("mfit_native", MODE_PRIVATE)
         val route = try { JSONArray(prefs.getString("route_points", "[]")) } catch (_: Exception) { JSONArray() }
         if (accepted) {
             route.put(JSONArray().put(location.latitude).put(location.longitude))
