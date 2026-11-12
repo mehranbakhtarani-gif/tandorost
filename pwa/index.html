@@ -810,6 +810,9 @@ body{font-family:Tahoma,Arial,sans-serif!important;line-height:1.55}
 @media(min-width:700px){#appRoot.app{padding-top:22px!important}}
 @media(prefers-reduced-motion:reduce){#appRoot *,#nav *{animation:none!important;transition:none!important}}
 
+
+:root[data-theme=dark]{--bg:#f2f6fc;--surface:#fff;--surface2:#f3f6fb;--ink:#1c2c43;--muted:#718198;--line:#e2e9f2;--green:#3266e9;--green2:#e8efff;--blue:#398ce0;--shadow:0 8px 24px rgba(40,68,110,.07);--nav:rgba(255,255,255,.96);color-scheme:light}
+#appRoot>section.tab::before,#appRoot>section.tab::after{display:none!important;content:none!important}
 </style></head>
 <body><main class="app home-mode" id="appRoot">
 <header><div class="brand"><small id="today"></small><h1>تندرست</h1><small>قدم‌های کوچک، حال بهتر 🌱</small></div><div class="header-actions"><button class="weather-chip" id="weatherHeader" type="button" aria-label="آب‌وهوا">🌤️ <span id="weatherHeaderText">آب‌وهوا</span></button><button class="install-btn" id="installBtn" hidden>نصب اپ</button><button class="iconbtn" id="themeBtn" aria-label="تغییر پوسته">☾</button></div></header>
