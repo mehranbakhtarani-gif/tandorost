@@ -5,6 +5,8 @@ import android.content.*
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.location.Location
+import android.location.LocationManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,6 +36,10 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
+import java.net.URL
 
 private val Ink = MFitPalette.Ink
 private val Lime = MFitPalette.Lime
@@ -49,6 +55,10 @@ class MainActivity : ComponentActivity() {
     private var activityHistory by mutableStateOf<List<String>>(emptyList())
     private var lastActivity by mutableStateOf("—")
     private var imported by mutableStateOf(false)
+    private var weatherPermissionGranted by mutableStateOf(false)
+    private val weatherPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+        weatherPermissionGranted = grants[Manifest.permission.ACCESS_FINE_LOCATION] == true || grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+    }
     private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
         if (grants[Manifest.permission.ACCESS_FINE_LOCATION] == true || grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true) startTracking()
     }
@@ -69,11 +79,15 @@ class MainActivity : ComponentActivity() {
         refreshTrack()
         lastActivity = prefs.getString("last_activity", "—") ?: "—"
         imported = prefs.getBoolean("legacy_imported", false)
+        weatherPermissionGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val filter = IntentFilter("com.mfit.app.TRACK_UPDATE")
         if (Build.VERSION.SDK_INT >= 33) { registerReceiver(receiver, filter, RECEIVER_NOT_EXPORTED) } else { registerReceiver(receiver, filter) }
         setContent { MFitApp(tracking, liveDistance, liveSeconds, lastActivity, imported, routePoints, activityHistory, 
             onStart = { requestTracking() }, onStop = { stopTracking() },
-            onImport = { importLauncher.launch(arrayOf("application/json", "text/*")) }) }
+            onImport = { importLauncher.launch(arrayOf("application/json", "text/*")) },
+            weatherPermissionGranted = weatherPermissionGranted,
+            onWeatherPermission = { weatherPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }) }
     }
     private fun refreshTrack() {
         liveDistance = prefs.getFloat("live_distance", 0f)
@@ -94,6 +108,128 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() { unregisterReceiver(receiver); super.onDestroy() }
 }
 
+
+private data class CurrentWeather(
+    val temperature: Double,
+    val feelsLike: Double,
+    val humidity: Int,
+    val wind: Double,
+    val code: Int
+)
+
+private suspend fun loadCurrentWeather(context: Context): CurrentWeather {
+    val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    val location = manager.getProviders(true).mapNotNull { provider ->
+        try { manager.getLastKnownLocation(provider) } catch (_: SecurityException) { null }
+    }.maxByOrNull { it.time } ?: throw IllegalStateException("موقعیت فعلی پیدا نشد؛ GPS یا سرویس مکان‌یابی گوشی را روشن کن.")
+    val endpoint = "https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=auto"
+    val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+        connectTimeout = 8000
+        readTimeout = 8000
+        requestMethod = "GET"
+    }
+    try {
+        val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+        val current = root.getJSONObject("current")
+        CurrentWeather(
+            current.getDouble("temperature_2m"),
+            current.getDouble("apparent_temperature"),
+            current.getInt("relative_humidity_2m"),
+            current.getDouble("wind_speed_10m"),
+            current.getInt("weather_code")
+        )
+    } finally {
+        connection.disconnect()
+    }
+}
+
+private fun weatherDescription(code: Int): String = when (code) {
+    0 -> "آسمان صاف"
+    1, 2 -> "کمی تا نیمه‌ابری"
+    3 -> "ابری"
+    45, 48 -> "مه‌آلود"
+    51, 53, 55, 56, 57 -> "نم‌نم باران"
+    61, 63, 65, 66, 67 -> "بارانی"
+    71, 73, 75, 77 -> "بارش برف"
+    80, 81, 82 -> "رگبار باران"
+    85, 86 -> "رگبار برف"
+    95, 96, 99 -> "رعدوبرق"
+    else -> "شرایط جوی"
+}
+
+@Composable
+private fun WeatherPanel(permissionGranted: Boolean, onRequestPermission: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var weather by remember { mutableStateOf<CurrentWeather?>(null) }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var refreshKey by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(permissionGranted, refreshKey) {
+        if (permissionGranted) {
+            loading = true
+            error = null
+            val result = runCatching { withContext(Dispatchers.IO) { loadCurrentWeather(context) } }
+            weather = result.getOrNull()
+            error = result.exceptionOrNull()?.message
+            loading = false
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(26.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    ) {
+        Column(
+            Modifier.fillMaxWidth()
+                .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF263D38), Color(0xFF172A28), Color(0xFF30483F))))
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("آب‌وهوای زنده", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("شرایط بیرون برای برنامه‌ریزی فعالیت", color = Color.White.copy(alpha = .72f), fontSize = 11.sp)
+                }
+                Icon(Icons.Default.WbSunny, contentDescription = null, tint = Color(0xFFD9F28A), modifier = Modifier.size(28.dp))
+            }
+            if (weather != null) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("${weather!!.temperature.toInt()}°", color = Color.White, fontSize = 42.sp, fontWeight = FontWeight.Black)
+                        Text(weatherDescription(weather!!.code), color = Color.White.copy(alpha = .88f), fontSize = 13.sp)
+                    }
+                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("حس‌شده ${weather!!.feelsLike.toInt()}°", color = Color.White, fontSize = 12.sp)
+                        Text("رطوبت ${weather!!.humidity}٪", color = Color.White.copy(alpha = .82f), fontSize = 11.sp)
+                        Text("باد ${weather!!.wind.toInt()} km/h", color = Color.White.copy(alpha = .82f), fontSize = 11.sp)
+                    }
+                }
+            } else {
+                Text(
+                    when {
+                        loading -> "در حال دریافت وضعیت آب‌وهوا…"
+                        !permissionGranted -> "برای نمایش هوای موقعیت فعلی، دسترسی مکان لازم است."
+                        else -> error ?: "اطلاعات هواشناسی در دسترس نیست."
+                    },
+                    color = Color.White.copy(alpha = .86f), fontSize = 12.sp
+                )
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(
+                    onClick = { if (permissionGranted) refreshKey++ else onRequestPermission() },
+                    enabled = !loading
+                ) {
+                    Icon(if (permissionGranted) Icons.Default.Refresh else Icons.Default.MyLocation, null, tint = Color(0xFFD9F28A))
+                    Spacer(Modifier.width(6.dp))
+                    Text(if (permissionGranted) "به‌روزرسانی" else "فعال‌کردن موقعیت", color = Color(0xFFD9F28A))
+                }
+            }
+        }
+    }
+}
+
 private data class DailyWellnessSnapshot(
     val date: String, val water: Int, val sleep: Float, val meals: Int,
     val workoutCalories: Int, val habits: Int
@@ -103,7 +239,8 @@ private enum class Tab(val label: String) { HOME("خانه"), ACTIVITY("فعال
 
 @Composable
 private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActivity: String, imported: Boolean, routePoints: List<Pair<Double, Double>>, activityHistory: List<String>,
-                    onStart: () -> Unit, onStop: () -> Unit, onImport: () -> Unit) {
+                    onStart: () -> Unit, onStop: () -> Unit, onImport: () -> Unit,
+                    weatherPermissionGranted: Boolean, onWeatherPermission: () -> Unit) {
     var tab by remember { mutableStateOf(Tab.HOME) }
     var water by remember { mutableIntStateOf(0) }
     var meal by remember { mutableStateOf("") }
@@ -210,6 +347,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                     when(page) {
                     Tab.HOME -> {
+                        WeatherPanel(weatherPermissionGranted, onWeatherPermission)
                         HomeHero(tracking, distance, seconds, onStart = { tab = Tab.ACTIVITY; onStart() })
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             DashboardStat("آب امروز", water.toString(), "لیوان", Icons.Default.WaterDrop, Modifier.weight(1f))
