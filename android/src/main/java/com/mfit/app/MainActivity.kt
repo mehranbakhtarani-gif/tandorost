@@ -118,6 +118,10 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
         workoutLog = prefs.getString("workout_log_today", "")?.split("\n")?.filter { it.isNotBlank() } ?: emptyList()
     }
     LaunchedEffect(Unit) {
+        val routineDay = java.time.LocalDate.now().toString()
+        if (prefs.getString("routine_day", "") != routineDay) {
+            prefs.edit().putString("routine_day", routineDay).putInt("water_today", 0).putString("habits_done_today", "0000").apply()
+        }
         water = prefs.getInt("water_today", 0)
         habitsDone = prefs.getString("habits_done_today", "0000")!!.map { it == '1' }.let { if (it.size == 4) it else listOf(false, false, false, false) }
         val dayKey = java.time.LocalDate.now().toString()
