@@ -97,7 +97,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
     var tab by remember { mutableStateOf(Tab.HOME) }
     var water by remember { mutableIntStateOf(0) }
     var meal by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("1") }
+    var amount by remember { mutableStateOf("100") }
     var mealLog by remember { mutableStateOf(listOf<String>()) }
     var sleep by remember { mutableFloatStateOf(8f) }
     var weight by remember { mutableStateOf("96") }
@@ -389,47 +389,118 @@ private fun DashboardMini(title: String, value: String, unit: String, icon: andr
     }
 }
 
-private data class Food(val name: String, val kcal: Int, val protein: Int, val carbs: Int, val sugar: Int, val fat: Int, val fiber: Int)
+private data class Food(val name: String, val kcal: Double, val protein: Double, val carbs: Double, val sugar: Double, val fat: Double, val fiber: Double)
 private val foods = listOf(
-    Food("تخم مرغ",78,6,1,0,5,0), Food("سیب",95,0,25,19,0,4), Food("موز",105,1,27,14,0,3),
-    Food("ماست یونانی",100,10,4,4,5,0), Food("سینه مرغ پخته",165,31,0,0,4,0),
-    Food("برنج پخته",205,4,45,0,0,1), Food("سیب زمینی آبپز",130,3,30,2,0,3),
-    Food("نان سنگک",80,3,16,1,1,1), Food("عدس پخته",230,18,40,4,1,16),
-    Food("گردو",185,4,4,1,18,2), Food("خیار",16,1,4,2,0,1), Food("گوجه",22,1,5,3,0,1)
+    Food("تخم مرغ کامل",155.0,13.0,1.1,1.1,11.0,0.0),
+    Food("سفیده تخم مرغ",52.0,10.9,0.7,0.7,0.2,0.0),
+    Food("سیب خام با پوست",52.0,0.3,13.8,10.4,0.2,2.4),
+    Food("موز خام",89.0,1.1,22.8,12.2,0.3,2.6),
+    Food("ماست یونانی ساده کم چرب",73.0,10.0,3.9,3.6,2.0,0.0),
+    Food("سینه مرغ پخته",165.0,31.0,0.0,0.0,3.6,0.0),
+    Food("برنج سفید پخته",130.0,2.7,28.2,0.1,0.3,0.4),
+    Food("سیب زمینی آبپز",87.0,1.9,20.1,0.9,0.1,1.8),
+    Food("نان سنگک",260.0,9.0,52.0,2.0,1.5,4.0),
+    Food("عدس پخته",116.0,9.0,20.1,1.8,0.4,7.9),
+    Food("نخود پخته",164.0,8.9,27.4,4.8,2.6,7.6),
+    Food("لوبیا چیتی پخته",143.0,9.0,26.2,0.3,0.7,9.0),
+    Food("گردو",654.0,15.2,13.7,2.6,65.2,6.7),
+    Food("بادام",579.0,21.2,21.6,4.4,49.9,12.5),
+    Food("خیار خام",15.0,0.7,3.6,1.7,0.1,0.5),
+    Food("گوجه فرنگی خام",18.0,0.9,3.9,2.6,0.2,1.2),
+    Food("جو دوسر خشک",389.0,16.9,66.3,0.9,6.9,10.6),
+    Food("شیر کم چرب",42.0,3.4,5.0,5.0,1.0,0.0),
+    Food("پنیر فتا",264.0,14.2,4.1,4.1,21.3,0.0),
+    Food("روغن زیتون",884.0,0.0,0.0,0.0,100.0,0.0)
 )
 
 @Composable private fun FoodPanel(meal: String, onMeal: (String) -> Unit, amount: String, onAmount: (String) -> Unit,
                                   log: List<String>, onAdd: (String) -> Unit) {
-    var selected by remember { mutableStateOf(foods.first()) }
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionTitle("ثبت تغذیه", "مقادیر تخمینی به‌صورت خودکار")
-        OutlinedTextField(value = meal, onValueChange = { value ->
-            onMeal(value); foods.firstOrNull { it.name.contains(value, true) }?.let { selected = it }
-        }, label = { Text("نام ماده غذایی") }, modifier = Modifier.fillMaxWidth())
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            foods.take(4).forEach { food -> AssistChip(onClick = { selected = food; onMeal(food.name) }, label = { Text(food.name, fontSize = 10.sp) }) }
-        }
-        OutlinedTextField(value = amount, onValueChange = onAmount, label = { Text("تعداد سهم") }, modifier = Modifier.fillMaxWidth())
-        val factor = (amount.toFloatOrNull() ?: 1f).coerceAtLeast(0f)
-        Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(selected.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text((selected.kcal * factor).toInt().toString() + " کیلوکالری", fontSize = 26.sp, fontWeight = FontWeight.Black)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("پروتئین " + (selected.protein * factor).toInt() + "g")
-                    Text("کربوهیدرات " + (selected.carbs * factor).toInt() + "g")
+    var selected by remember { mutableStateOf<Food?>(null) }
+    val grams = (amount.replace(',', '.').toDoubleOrNull() ?: 0.0).coerceIn(0.0, 5000.0)
+    val factor = grams / 100.0
+    val matches = if (meal.isBlank()) foods.take(6) else foods.filter { it.name.contains(meal.trim(), ignoreCase = true) }.take(7)
+    val kcal = selected?.let { it.kcal * factor } ?: 0.0
+    val protein = selected?.let { it.protein * factor } ?: 0.0
+    val carbs = selected?.let { it.carbs * factor } ?: 0.0
+    val sugar = selected?.let { it.sugar * factor } ?: 0.0
+    val fat = selected?.let { it.fat * factor } ?: 0.0
+    val fiber = selected?.let { it.fiber * factor } ?: 0.0
+    val todayKcal = log.sumOf { it.split(" • ").getOrNull(2)?.removeSuffix(" kcal")?.toDoubleOrNull() ?: 0.0 }
+    val todayProtein = log.sumOf { it.split(" • ").getOrNull(3)?.removeSuffix("g P")?.toDoubleOrNull() ?: 0.0 }
+    val todayCarbs = log.sumOf { it.split(" • ").getOrNull(4)?.removeSuffix("g C")?.toDoubleOrNull() ?: 0.0 }
+    val todayFat = log.sumOf { it.split(" • ").getOrNull(5)?.removeSuffix("g F")?.toDoubleOrNull() ?: 0.0 }
+    Column(verticalArrangement = Arrangement.spacedBy(13.dp)) {
+        SectionTitle("ثبت تغذیه", "مقدار را وارد کن؛ محاسبه خودکار انجام می‌شود")
+        OutlinedTextField(value = meal, onValueChange = { onMeal(it); selected = foods.firstOrNull { f -> f.name.equals(it.trim(), true) } },
+            label = { Text("جست‌وجوی غذا یا ماده غذایی") }, modifier = Modifier.fillMaxWidth(), singleLine = true,
+            trailingIcon = { Icon(Icons.Default.Search, null) })
+        Text(if (meal.isBlank()) "غذاهای پرکاربرد" else if(matches.isEmpty()) "موردی در فهرست آفلاین پیدا نشد" else "انتخاب نتیجه", color = Muted, fontSize = 12.sp)
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            matches.forEach { food ->
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp))
+                    .background(if(selected == food) Color(0xFFEAF2D4) else Color.White)
+                    .clickable { selected = food; onMeal(food.name) }.padding(horizontal = 13.dp, vertical = 11.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(food.name, fontSize = 13.sp, fontWeight = if(selected == food) FontWeight.Bold else FontWeight.Medium, color = Ink)
+                    Text("${food.kcal.toInt()} kcal / 100g", fontSize = 11.sp, color = Muted)
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("قند " + (selected.sugar * factor).toInt() + "g")
-                    Text("چربی " + (selected.fat * factor).toInt() + "g")
-                }
-                Text("فیبر " + (selected.fiber * factor).toInt() + "g", color = Muted)
             }
         }
-        Button(onClick = { onAdd(selected.name + " • " + (selected.kcal * factor).toInt() + " kcal") },
-            modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("ثبت وعده", color = Color.White) }
+        OutlinedTextField(value = amount, onValueChange = onAmount, label = { Text("مقدار مصرف‌شده (گرم)") },
+            modifier = Modifier.fillMaxWidth(), singleLine = true, suffix = { Text("g") })
+        Card(colors = CardDefaults.cardColors(containerColor = Ink), shape = RoundedCornerShape(24.dp)) {
+            Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(selected?.name ?: "ابتدا یک غذا انتخاب کن", color = Color.LightGray, fontSize = 13.sp)
+                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text(if(selected == null) "—" else kcal.toInt().toString(), color = Lime, fontSize = 38.sp, fontWeight = FontWeight.Black)
+                    Text("کیلوکالری", color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(bottom = 7.dp))
+                    Spacer(Modifier.weight(1f))
+                    Text(if(selected == null) "بر اساس 100 گرم" else "${grams.toInt()} گرم", color = Color.LightGray, fontSize = 11.sp, modifier = Modifier.padding(bottom = 8.dp))
+                }
+                HorizontalDivider(color = Color.White.copy(alpha = .16f))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    NutrientValue("پروتئین", protein, Color.White)
+                    NutrientValue("کربوهیدرات", carbs, Color.White)
+                    NutrientValue("چربی", fat, Color.White)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    NutrientValue("قند", sugar, Color.White)
+                    NutrientValue("فیبر", fiber, Color.White)
+                }
+            }
+        }
+        Button(onClick = {
+            selected?.let { food ->
+                onAdd("${food.name} • ${grams.toInt()} g • ${kcal.toInt()} kcal • ${"%.1f".format(java.util.Locale.US, protein)}g P • ${"%.1f".format(java.util.Locale.US, carbs)}g C • ${"%.1f".format(java.util.Locale.US, fat)}g F")
+            }
+        }, enabled = selected != null && grams > 0.0, modifier = Modifier.fillMaxWidth().height(54.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = RoundedCornerShape(17.dp)) {
+            Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text("ثبت در وعده امروز", color = Color.White)
+        }
+        SectionTitle("جمع ثبت‌شده امروز", "مجموع غذاهایی که در این روز وارد کرده‌ای")
+        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp)) {
+            Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("${todayKcal.toInt()} kcal", fontSize = 27.sp, fontWeight = FontWeight.Black, color = Ink)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    NutrientValue("پروتئین", todayProtein, Ink)
+                    NutrientValue("کربوهیدرات", todayCarbs, Ink)
+                    NutrientValue("چربی", todayFat, Ink)
+                }
+            }
+        }
         SectionTitle("موارد ثبت‌شده", "امروز")
-        log.forEach { Text("• " + it, modifier = Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(12.dp)).padding(12.dp)) }
+        if(log.isEmpty()) Text("هنوز غذایی ثبت نشده.", color = Muted, fontSize = 12.sp)
+        log.asReversed().forEach { entry ->
+            Text(entry, modifier = Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(12.dp)).padding(12.dp), fontSize = 12.sp, color = Ink)
+        }
+        Text("مقادیر این فهرست، مرجع عمومی و تقریبی بر پایه ۱۰۰ گرم بخش خوراکی هستند. نوع پخت و برند می‌تواند مقدار واقعی را تغییر دهد.", color = Muted, fontSize = 10.sp)
+    }
+}
+
+@Composable private fun NutrientValue(label: String, value: Double, color: Color) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(label, color = if(color == Color.White) Color.LightGray else Muted, fontSize = 10.sp)
+        Text("${"%.1f".format(java.util.Locale.US, value)} g", color = color, fontWeight = FontWeight.Bold, fontSize = 13.sp)
     }
 }
 
