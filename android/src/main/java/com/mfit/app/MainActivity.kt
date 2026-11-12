@@ -32,10 +32,10 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 
-private val Ink = Color(0xFF17191B)
-private val Lime = Color(0xFFD7FF00)
-private val Paper = Color(0xFFF4F5F1)
-private val Muted = Color(0xFF777D7B)
+private val Ink = MFitPalette.Ink
+private val Lime = MFitPalette.Lime
+private val Paper = MFitPalette.Canvas
+private val Muted = MFitPalette.Muted
 
 class MainActivity : ComponentActivity() {
     private val prefs by lazy { getSharedPreferences("mfit_native", MODE_PRIVATE) }
@@ -125,28 +125,10 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
         if (prefs.getString("workout_log_date", "") != today) prefs.edit().putString("workout_log_date", today).putString("workout_log_today", "").apply()
         workoutLog = prefs.getString("workout_log_today", "")?.split("\n")?.filter { it.isNotBlank() } ?: emptyList()
     }
-    MaterialTheme(colorScheme = lightColorScheme(primary = Ink, secondary = Lime, background = Paper, surface = Color.White)) {
+    MFitTheme {
         Scaffold(
             containerColor = Paper,
-            bottomBar = {
-                NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
-                    Tab.values().forEach { item ->
-                        val selected = tab == item
-                        NavigationBarItem(
-                            selected = selected, onClick = { tab = item },
-                            icon = { Icon(when(item) {
-                                Tab.HOME -> Icons.Default.Home
-                                Tab.ACTIVITY -> Icons.Default.DirectionsRun
-                                Tab.FOOD -> Icons.Default.Restaurant
-                                Tab.ROUTINE -> Icons.Default.FitnessCenter
-                                Tab.PROFILE -> Icons.Default.Person
-                            }, null) },
-                            label = { Text(item.label, fontSize = 10.sp, fontWeight = if(selected) FontWeight.Bold else FontWeight.Normal) },
-                            colors = NavigationBarItemDefaults.colors(selectedIconColor = Ink, indicatorColor = Lime, unselectedIconColor = Muted)
-                        )
-                    }
-                }
-            }
+            bottomBar = { MFitBottomBar(tab) { tab = it } }
         ) { padding ->
             Column(
                 Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
@@ -172,7 +154,12 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                         Text("M", fontWeight = FontWeight.Black, fontSize = 21.sp, color = Ink)
                     }
                 }
-                when(tab) {
+                androidx.compose.animation.Crossfade(
+                    targetState = tab,
+                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 240),
+                    label = "mfit-tab-transition"
+                ) { page ->
+                    when(page) {
                     Tab.HOME -> {
                         HomeHero(tracking, distance, seconds, onStart = { tab = Tab.ACTIVITY; onStart() })
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -255,6 +242,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                             }
                         }
                     }
+                    }
                 }
                 Spacer(Modifier.height(14.dp))
             }
@@ -263,33 +251,130 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
 }
 
 @Composable
+private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(28.dp),
+        color = Color.White.copy(alpha = .97f),
+        shadowElevation = 14.dp,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MFitPalette.Stroke)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().height(70.dp).padding(horizontal = 5.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Tab.values().forEach { item ->
+                val selected = selectedTab == item
+                Column(
+                    Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(19.dp))
+                        .clickable { onSelect(item) }.padding(vertical = 2.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Box(
+                        Modifier.size(if (selected) 37.dp else 34.dp).clip(CircleShape)
+                            .background(if (selected) Lime else Color.Transparent),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            when (item) {
+                                Tab.HOME -> Icons.Default.Home
+                                Tab.ACTIVITY -> Icons.Default.DirectionsRun
+                                Tab.FOOD -> Icons.Default.Restaurant
+                                Tab.ROUTINE -> Icons.Default.FitnessCenter
+                                Tab.PROFILE -> Icons.Default.Person
+                            },
+                            contentDescription = item.label,
+                            tint = if (selected) Ink else Muted,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Text(
+                        item.label,
+                        fontSize = 9.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (selected) Ink else Muted,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun HomeHero(tracking: Boolean, distance: Float, seconds: Long, onStart: () -> Unit) {
     Box(
-        Modifier.fillMaxWidth().height(236.dp).clip(RoundedCornerShape(30.dp))
-            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF22282A), Color(0xFF101415))))
+        Modifier.fillMaxWidth().height(246.dp).clip(RoundedCornerShape(30.dp))
+            .background(
+                androidx.compose.ui.graphics.Brush.linearGradient(
+                    listOf(Color(0xFF28332F), Color(0xFF111917), Color(0xFF17211E))
+                )
+            )
             .clickable(onClick = onStart).padding(22.dp)
     ) {
         Canvas(Modifier.fillMaxSize()) {
-            val stroke = 9.dp.toPx()
-            drawCircle(color = Color(0xFF3D4543), radius = 70.dp.toPx(), style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
-            drawArc(color = Lime, startAngle = -90f, sweepAngle = 118f, useCenter = false,
-                style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round),
-                topLeft = androidx.compose.ui.geometry.Offset(size.width - 164.dp.toPx(), 20.dp.toPx()),
-                size = androidx.compose.ui.geometry.Size(140.dp.toPx(), 140.dp.toPx()))
-            drawCircle(color = Lime.copy(alpha = .08f), radius = 105.dp.toPx(), center = androidx.compose.ui.geometry.Offset(size.width - 94.dp.toPx(), 90.dp.toPx()))
+            val centerX = size.width - 94.dp.toPx()
+            val centerY = size.height * .51f
+            val outer = 146.dp.toPx()
+            val middle = 116.dp.toPx()
+            val inner = 86.dp.toPx()
+            drawCircle(Color(0xFF46534D), outer / 2, androidx.compose.ui.geometry.Offset(centerX, centerY),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(10.dp.toPx()))
+            drawArc(
+                color = Lime, startAngle = -90f, sweepAngle = if (tracking) 255f else 214f,
+                useCenter = false,
+                topLeft = androidx.compose.ui.geometry.Offset(centerX - outer / 2, centerY - outer / 2),
+                size = androidx.compose.ui.geometry.Size(outer, outer),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(10.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            )
+            drawCircle(Color(0xFF46534D), middle / 2, androidx.compose.ui.geometry.Offset(centerX, centerY),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(8.dp.toPx()))
+            drawArc(
+                color = Color(0xFF8DB7A0), startAngle = -90f, sweepAngle = 172f,
+                useCenter = false,
+                topLeft = androidx.compose.ui.geometry.Offset(centerX - middle / 2, centerY - middle / 2),
+                size = androidx.compose.ui.geometry.Size(middle, middle),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(8.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            )
+            drawCircle(Color(0xFF46534D), inner / 2, androidx.compose.ui.geometry.Offset(centerX, centerY),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(7.dp.toPx()))
+            drawArc(
+                color = Color(0xFFB6C6A1), startAngle = -90f, sweepAngle = 112f,
+                useCenter = false,
+                topLeft = androidx.compose.ui.geometry.Offset(centerX - inner / 2, centerY - inner / 2),
+                size = androidx.compose.ui.geometry.Size(inner, inner),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(7.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            )
+            drawCircle(Lime.copy(alpha = .07f), 105.dp.toPx(), androidx.compose.ui.geometry.Offset(centerX, centerY))
         }
-        Column(Modifier.align(Alignment.CenterStart).fillMaxWidth(.66f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("YOUR HEALTH. YOUR PACE.", color = Lime, fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
-            Text(if(tracking) "در حال ثبت فعالیت" else "قوی‌تر از دیروز.", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Black, lineHeight = 32.sp)
-            Text(if(tracking) "%.2f km  •  %02d:%02d".format(distance / 1000f, seconds / 60, seconds % 60) else "هر حرکت کوچیک، یک قدم رو به جلوست.", color = Color(0xFFB9C0BC), fontSize = 12.sp)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+        Column(
+            Modifier.align(Alignment.CenterStart).fillMaxWidth(.64f),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text("YOUR DAILY WELLNESS", color = Lime, fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
+            Text(
+                if (tracking) "در حال ثبت فعالیت" else "امروز، برای خودت وقت بذار.",
+                color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black, lineHeight = 31.sp
+            )
+            Text(
+                if (tracking) "%.2f km  •  %02d:%02d".format(distance / 1000f, seconds / 60, seconds % 60)
+                else "حرکت، تغذیه و ریکاوری؛ همه در یک مسیر.",
+                color = Color(0xFFC2CCC5), fontSize = 11.sp, lineHeight = 17.sp
+            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.size(34.dp).clip(CircleShape).background(Lime), contentAlignment = Alignment.Center) {
                     Icon(Icons.Default.PlayArrow, null, tint = Ink)
                 }
-                Text(if(tracking) "مشاهده فعالیت" else "شروع فعالیت", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text(if (tracking) "مشاهده فعالیت" else "شروع فعالیت", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
-        Text("M", Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp), color = Lime.copy(alpha = .85f), fontSize = 12.sp, fontWeight = FontWeight.Black)
+        Text(
+            "M",
+            Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 2.dp),
+            color = Lime.copy(alpha = .9f), fontSize = 12.sp, fontWeight = FontWeight.Black
+        )
     }
 }
 
