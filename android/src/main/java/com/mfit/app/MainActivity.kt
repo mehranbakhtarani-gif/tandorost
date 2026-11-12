@@ -106,6 +106,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
     var waist by remember { mutableStateOf("106") }
     var heightCm by remember { mutableStateOf("182") }
     var workoutLog by remember { mutableStateOf(listOf<String>()) }
+    var habitsDone by remember { mutableStateOf(listOf(false, false, false, false)) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { context.getSharedPreferences("mfit_native", Context.MODE_PRIVATE) }
     val workoutCaloriesToday = workoutLog.sumOf { it.substringAfterLast("|", "0").toIntOrNull() ?: 0 }
@@ -118,6 +119,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
     }
     LaunchedEffect(Unit) {
         water = prefs.getInt("water_today", 0)
+        habitsDone = prefs.getString("habits_done_today", "0000")!!.map { it == '1' }.let { if (it.size == 4) it else listOf(false, false, false, false) }
         val dayKey = java.time.LocalDate.now().toString()
         if (prefs.getString("meal_log_date", "") != dayKey) { prefs.edit().putString("meals_today", "").putString("meal_log_date", dayKey).apply() }
         mealLog = prefs.getString("meals_today", "")?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
@@ -227,7 +229,9 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                     Tab.ROUTINE -> {
                         RoutinePanel(sleep, { sleep = it; prefs.edit().putFloat("sleep_hours", it).apply() },
                             weight.replace(",", ".").toDoubleOrNull()?.coerceIn(30.0, 250.0) ?: 70.0,
-                            workoutLog, { record -> workoutLog = workoutLog + record; prefs.edit().putString("workout_log_today", workoutLog.joinToString("\n")).apply() })
+                            workoutLog, { record -> workoutLog = workoutLog + record; prefs.edit().putString("workout_log_today", workoutLog.joinToString("\n")).apply() },
+                            water, { next -> water = next.coerceAtLeast(0); prefs.edit().putInt("water_today", water).apply() },
+                            habitsDone, { index, checked -> habitsDone = habitsDone.toMutableList().also { it[index] = checked }; prefs.edit().putString("habits_done_today", habitsDone.joinToString("") { if (it) "1" else "0" }).apply() })
                     }
                     Tab.PROFILE -> {
                         SectionTitle("پروفایل", "اطلاعات شخصی و داده‌ها")
@@ -513,7 +517,9 @@ private fun DashboardMini(title: String, value: String, unit: String, icon: andr
 @Composable
 private fun RoutinePanel(
     sleep: Float, onSleepChange: (Float) -> Unit, weightKg: Double,
-    workoutLog: List<String>, onAddWorkout: (String) -> Unit
+    workoutLog: List<String>, onAddWorkout: (String) -> Unit,
+    waterGlasses: Int, onWaterChange: (Int) -> Unit,
+    habitsDone: List<Boolean>, onHabitChange: (Int, Boolean) -> Unit
 ) {
     val workouts = listOf(
         Triple("کشش کل بدن", 2.5, "حرکات آرام برای گردن، شانه، پشت و پاها"),
@@ -542,14 +548,45 @@ private fun RoutinePanel(
                 Text("برآورد بر اساس نوع تمرین، مدت و وزن پروفایل", color = Color.LightGray, fontSize = 10.sp)
             }
         }
+        SectionTitle("آب‌رسانی روزانه", "هدف پیشنهادی: ۸ لیوان، هر لیوان حدود ۲۵۰ میلی‌لیتر")
+        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(22.dp)) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column { Text("${waterGlasses} / 8 لیوان", fontSize = 24.sp, color = Ink, fontWeight = FontWeight.Black); Text("${waterGlasses * 250} میلی‌لیتر ثبت‌شده", color = Muted, fontSize = 11.sp) }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { onWaterChange(waterGlasses - 1) }, enabled = waterGlasses > 0) { Text("−") }
+                        Button(onClick = { onWaterChange(waterGlasses + 1) }, colors = ButtonDefaults.buttonColors(containerColor = Lime, contentColor = Ink)) { Text("+ لیوان") }
+                    }
+                }
+                Box(Modifier.fillMaxWidth().height(9.dp).clip(CircleShape).background(Color(0xFFEDEFEB))) {
+                    Box(Modifier.fillMaxWidth((waterGlasses / 8f).coerceIn(0f, 1f)).fillMaxHeight().clip(CircleShape).background(Lime))
+                }
+            }
+        }
+        SectionTitle("عادت‌های امروز", "کارهای کوچک و قابل تکرار")
+        val dailyHabits = listOf("حداقل ۱۵ دقیقه پیاده‌روی یا تحرک", "ثبت وعده‌های غذایی", "نوشیدن آب در طول روز", "خاموش‌کردن صفحه‌نمایش پیش از خواب")
+        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(22.dp)) {
+            Column(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
+                dailyHabits.forEachIndexed { index, label ->
+                    Row(Modifier.fillMaxWidth().clickable { onHabitChange(index, !habitsDone.getOrElse(index) { false }) }.padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        androidx.compose.material3.Checkbox(checked = habitsDone.getOrElse(index) { false }, onCheckedChange = { onHabitChange(index, it) })
+                        Text(label, color = if (habitsDone.getOrElse(index) { false }) Muted else Ink, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    }
+                    if (index != dailyHabits.lastIndex) HorizontalDivider(color = Color(0xFFEDEFEB), modifier = Modifier.padding(horizontal = 14.dp))
+                }
+                val completed = habitsDone.count { it }
+                Text("${completed} از ۴ عادت تکمیل شده", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = Muted, fontSize = 11.sp)
+            }
+        }
         SectionTitle("تمرین‌های قابل ثبت", "بدون باشگاه و با وزن بدن")
         workouts.forEach { item ->
             val active = selected == item.first
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(17.dp)).background(if (active) Color(0xFFEAF2D4) else Color.White)
                 .clickable { selected = item.first }.padding(14.dp), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(11.dp)) {
-                Box(Modifier.size(40.dp).clip(CircleShape).background(if (active) Lime else Color(0xFFF0F2EC)), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.FitnessCenter, null, tint = Ink)
+                Box(Modifier.size(46.dp).clip(RoundedCornerShape(15.dp)).background(if (active) Lime else Color(0xFFF0F2EC)), contentAlignment = Alignment.Center) {
+                    Icon(if (item.first.contains("کشش") || item.first.contains("انعطاف") || item.first.contains("یوگا")) Icons.Default.SelfImprovement else Icons.Default.FitnessCenter, null, tint = Ink, modifier = Modifier.size(22.dp))
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(item.first, color = Ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
