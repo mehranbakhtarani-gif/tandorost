@@ -177,6 +177,15 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                             DashboardStat("آب امروز", water.toString(), "لیوان", Icons.Default.WaterDrop, Modifier.weight(1f))
                             DashboardStat("آخرین فعالیت", if(lastActivity == "—") "—" else lastActivity, "کیلومتر", Icons.Default.DirectionsRun, Modifier.weight(1f))
                         }
+                        SmartCoachPanel(
+                            water = water,
+                            mealCount = mealLog.size,
+                            sleepHours = sleep,
+                            workoutCalories = workoutCaloriesToday,
+                            habitsCompleted = habitsDone.count { it },
+                            onFood = { tab = Tab.FOOD },
+                            onRoutine = { tab = Tab.ROUTINE }
+                        )
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                 Text("سلامت روزانه", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
@@ -277,7 +286,7 @@ private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
         shape = RoundedCornerShape(28.dp),
-        color = Color.White.copy(alpha = .97f),
+        color = Color(0xFFEAF4F1).copy(alpha = .78f),
         shadowElevation = 14.dp,
         border = androidx.compose.foundation.BorderStroke(1.dp, MFitPalette.Stroke)
     ) {
@@ -401,8 +410,55 @@ private fun HomeHero(tracking: Boolean, distance: Float, seconds: Long, onStart:
 }
 
 @Composable
+private fun SmartCoachPanel(
+    water: Int, mealCount: Int, sleepHours: Float, workoutCalories: Int,
+    habitsCompleted: Int, onFood: () -> Unit, onRoutine: () -> Unit
+) {
+    val recovery = ((sleepHours / 8f).coerceIn(0f, 1f) * 55f +
+        (habitsCompleted / 4f) * 25f +
+        (if (water >= 6) 20f else water / 6f * 20f)).toInt().coerceIn(0, 100)
+    val advice = when {
+        sleepHours < 6f -> "امشب ریکاوری را در اولویت بگذار؛ خواب کافی از تمرین سنگین مهم‌تر است."
+        water < 4 -> "تا اینجای روز آب کمی ثبت شده؛ یک یا دو لیوان آب به برنامه‌ات اضافه کن."
+        mealCount == 0 -> "هنوز وعده‌ای ثبت نکرده‌ای؛ غذایت را وارد کن تا تحلیل تغذیه دقیق‌تر شود."
+        workoutCalories == 0 -> "اگر انرژی داری، ۱۰ تا ۱۵ دقیقه پیاده‌روی سبک می‌تواند شروع خوبی باشد."
+        else -> "ریتم خوبی داری؛ استمرار و خواب کافی را حفظ کن و لازم نیست هر روز شدت تمرین را بالا ببری."
+    }
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp))
+            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF263D38), Color(0xFF172A28), Color(0xFF30483F))))
+            .border(1.dp, Color.White.copy(alpha = .25f), RoundedCornerShape(26.dp)).padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(13.dp)
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text("M FIT • SMART COACH", color = Lime, fontSize = 9.sp, letterSpacing = 1.6.sp, fontWeight = FontWeight.Bold)
+                Text("مربی هوشمند روزانه", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+            }
+            Box(Modifier.size(48.dp).clip(CircleShape).background(Color.White.copy(alpha = .12f)).border(1.dp, Color.White.copy(alpha = .3f), CircleShape), contentAlignment = Alignment.Center) {
+                Text("$recovery", color = Lime, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            }
+        }
+        Text("شاخص آمادگی تخمینی • $recovery از ۱۰۰", color = Color(0xFFD5E2DA), fontSize = 11.sp)
+        Box(Modifier.fillMaxWidth().height(7.dp).clip(CircleShape).background(Color.White.copy(alpha = .14f))) {
+            Box(Modifier.fillMaxWidth(recovery / 100f).fillMaxHeight().clip(CircleShape).background(Lime))
+        }
+        Text(advice, color = Color.White, fontSize = 13.sp, lineHeight = 21.sp, fontWeight = FontWeight.Medium)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            OutlinedButton(onClick = onFood, modifier = Modifier.weight(1f), border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .35f)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
+                Icon(Icons.Default.Restaurant, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text("تحلیل تغذیه", fontSize = 11.sp)
+            }
+            OutlinedButton(onClick = onRoutine, modifier = Modifier.weight(1f), border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .35f)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
+                Icon(Icons.Default.Bedtime, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text("ریکاوری و روتین", fontSize = 11.sp)
+            }
+        }
+        Text("این امتیاز یک برآورد محلی بر اساس خواب، آب و عادت‌های ثبت‌شده است؛ داده حسگر یا تشخیص پزشکی نیست.", color = Color(0xFFB8C9C0), fontSize = 9.sp, lineHeight = 14.sp)
+    }
+}
+
+@Composable
 private fun DashboardStat(title: String, value: String, unit: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier) {
-    Row(modifier.clip(RoundedCornerShape(22.dp)).background(Color.White).padding(15.dp),
+    Row(modifier.clip(RoundedCornerShape(22.dp)).background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color.White.copy(alpha = .94f), Color(0xFFEAF2F0).copy(alpha = .76f)))).border(1.dp, Color.White.copy(alpha = .9f), RoundedCornerShape(22.dp)).padding(15.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
         Box(Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFFF0F3E9)), contentAlignment = Alignment.Center) {
             Icon(icon, null, tint = Ink, modifier = Modifier.size(21.dp))
@@ -419,7 +475,7 @@ private fun DashboardStat(title: String, value: String, unit: String, icon: andr
 
 @Composable
 private fun DashboardMini(title: String, value: String, unit: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier) {
-    Column(modifier.clip(RoundedCornerShape(22.dp)).background(Color.White).padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+    Column(modifier.clip(RoundedCornerShape(22.dp)).background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color.White.copy(alpha = .94f), Color(0xFFEAF2F0).copy(alpha = .76f)))).border(1.dp, Color.White.copy(alpha = .9f), RoundedCornerShape(22.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(title, fontSize = 12.sp, color = Muted)
             Icon(icon, null, tint = Muted, modifier = Modifier.size(18.dp))
