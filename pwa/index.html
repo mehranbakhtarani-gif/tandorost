@@ -658,11 +658,24 @@ body{color:#193440!important}
  #appRoot .card,#appRoot .stat,#appRoot .dash-card,#appRoot .weekly-card,#appRoot .task-card,#appRoot .profile-menu-item,#appRoot .activity-mode,#appRoot .tab:not(#home)>.card{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(255,255,255,.94)!important}
 }
 
+
+/* Weather header — Persian weather endpoint with offline last-known snapshot */
+.weather-chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;max-width:190px;min-height:38px;padding:7px 11px;border-radius:15px;background:rgba(116,197,220,.16);border:1px solid rgba(150,218,235,.32);color:inherit;font-size:11px;font-weight:800;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);white-space:nowrap}
+.weather-chip span{overflow:hidden;text-overflow:ellipsis}
+.welcome-weather{margin:-7px 2px 13px}
+.home-weather-chip{width:100%;justify-content:flex-start;min-height:48px;padding:9px 14px;border-radius:17px;background:rgba(85,158,188,.17);border-color:rgba(155,215,232,.25);color:#eef9ff;box-shadow:inset 0 1px rgba(255,255,255,.14),0 8px 22px rgba(0,0,0,.1)}
+.home-weather-chip #weatherHomeText{flex:1;text-align:right}
+.weather-chevron{font-size:20px;opacity:.7}
+#weatherHeader{color:var(--ink)}
+.app.home-mode #weatherHeader{color:#f2f8fb}
+@media(max-width:370px){.weather-chip{max-width:118px;font-size:10px;padding:6px 8px}.header-actions{gap:5px}}
+
 </style></head>
 <body><main class="app home-mode" id="appRoot">
-<header><div class="brand"><small id="today"></small><h1>تندرست</h1><small>قدم‌های کوچک، حال بهتر 🌱</small></div><div class="header-actions"><button class="install-btn" id="installBtn" hidden>نصب اپ</button><button class="iconbtn" id="themeBtn" aria-label="تغییر پوسته">☾</button></div></header>
+<header><div class="brand"><small id="today"></small><h1>تندرست</h1><small>قدم‌های کوچک، حال بهتر 🌱</small></div><div class="header-actions"><button class="weather-chip" id="weatherHeader" type="button" aria-label="آب‌وهوا">🌤️ <span id="weatherHeaderText">آب‌وهوا</span></button><button class="install-btn" id="installBtn" hidden>نصب اپ</button><button class="iconbtn" id="themeBtn" aria-label="تغییر پوسته">☾</button></div></header>
 <section class="tab active" id="home">
  <div class="welcome"><div><p id="homeGreeting">سلام 👋</p><h2>امروز حالت چطوره؟</h2><small id="dateHome"></small></div><div class="avatar" id="homeAvatar">👤</div></div>
+ <div class="welcome-weather"><button class="weather-chip home-weather-chip" id="weatherHomeBtn" type="button"><span id="weatherHomeIcon">🌤️</span><span id="weatherHomeText">در حال دریافت آب‌وهوا…</span><span class="weather-chevron">‹</span></button></div>
  <div class="home-grid">
   <article class="dash-card step-card"><div class="dash-title"><span>👟</span><b>قدم‌های امروز</b></div><div class="mini-ring"><svg viewBox="0 0 120 120"><circle class="ring-track" cx="60" cy="60" r="48"/><circle class="ring-value" id="mainRing" cx="60" cy="60" r="48" stroke-dasharray="302" stroke-dashoffset="302"/></svg><div><strong id="stepHome">۰</strong><small>قدم</small></div></div><div class="mini-foot"><span>هدف روزانه</span><b id="homeStepGoal">۸٬۰۰۰ قدم</b></div><div class="tiny-progress"><i id="stepProgress"></i></div><small id="stepPercent" class="muted">۰٪ تکمیل</small></article>
   <article class="dash-card water-card"><div class="dash-title"><span>💧</span><b>مصرف آب امروز</b></div><div class="glass-wrap"><div class="waterglass"><i id="waterHomeFill" style="height:0%"></i><b id="waterHome">۰</b></div></div><strong class="water-unit">لیتر</strong><div class="mini-foot"><span>هدف پیشنهادی</span><b>۲ لیتر</b></div><button class="quick-add" data-go="routine">+ ثبت آب</button></article>
@@ -768,6 +781,53 @@ $('profileThemeBtn').onclick=()=>$('themeBtn').click();
 $('savePreferences').onclick=()=>{let stepGoal=+$('stepGoalInput').value;if(stepGoal<500||stepGoal>50000){toast('هدف قدم باید بین ۵۰۰ تا ۵۰٬۰۰۰ باشد');return}db.profile.stepGoal=stepGoal;save();renderHome();toast('تنظیمات ذخیره شد')};
 $('saveMeasure').onclick=()=>{let w=$('measureWeight').value,wa=$('measureWaist').value;if(!w&&!wa){toast('حداقل یک اندازه وارد کن');return}db.measurements.unshift({date:new Date().toLocaleDateString('fa-IR'),weight:w?+w:null,waist:wa?+wa:null});if(w)db.profile.weight=+w;$('measureWeight').value='';$('measureWaist').value='';save();renderProgress();renderHome();toast('اندازه‌گیری ثبت شد')};
 $('exportData').onclick=()=>{let blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='tandorost-backup-'+today()+'.json';a.click();URL.revokeObjectURL(url);toast('فایل پشتیبان آماده شد')};$('importFile').onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);if(!x.profile||!x.days)throw Error();db={...fresh(),...x};save();renderAll();renderProgress();renderProfile();toast('اطلاعات بازیابی شد')}catch(err){toast('فایل پشتیبان معتبر نیست')}};r.readAsText(f)};$('clearData').onclick=()=>{if(confirm('همه اطلاعات ذخیره‌شده در این مرورگر پاک شود؟')){db=fresh();save();renderAll();renderProgress();renderProfile();toast('اطلاعات پاک شد')}};
+
+/* Weather: Runama Persian endpoint + persistent last successful result */
+const WEATHER_CACHE_KEY='tandorost-weather-last-v1';
+function paintWeather(data,offline=false){
+ const cur=data.current||data.result?.current||data;
+ const city=data.location?.name||data.city||db.weatherCity||'تهران';
+ const temp=cur.temperature??cur.temperature_2m??cur.temp??cur.temp_c;
+ const desc=cur.description_fa||cur.description||cur.weather_description||'وضعیت هوا';
+ const icon=cur.icon||'🌤️';
+ const label=(temp!==undefined&&temp!==null?Math.round(Number(temp))+'°':'')+' '+desc+(offline?' · ذخیره‌شده':'');
+ const a=$('weatherHeaderText'),b=$('weatherHomeText'),ic=$('weatherHomeIcon');
+ if(a)a.textContent=city+' · '+(temp!==undefined?Math.round(Number(temp))+'°':desc);
+ if(b)b.textContent=city+' · '+label;
+ if(ic)ic.textContent=icon;
+}
+async function loadWeather(force=false){
+ let cached=null;try{cached=JSON.parse(localStorage.getItem(WEATHER_CACHE_KEY)||'null')}catch(e){}
+ if(!force&&cached&&Date.now()-cached.savedAt<20*60*1000){paintWeather(cached.data);return}
+ const city=db.weatherCity||'تهران';
+ try{
+  const url='https://weather.runama.com/api/weather.php?q='+encodeURIComponent(city)+'&days=1';
+  const response=await fetch(url,{method:'GET',headers:{Accept:'application/json'},cache:'no-store'});
+  if(!response.ok)throw new Error('weather http '+response.status);
+  const data=await response.json();
+  if(data.error||(!data.current&&!data.result?.current&&!data.temperature&&!data.temp))throw new Error('weather data unavailable');
+  localStorage.setItem(WEATHER_CACHE_KEY,JSON.stringify({savedAt:Date.now(),data}));
+  paintWeather(data,false);
+ }catch(error){
+  if(cached?.data){paintWeather(cached.data,true)}
+  else{
+   const a=$('weatherHeaderText'),b=$('weatherHomeText');
+   if(a)a.textContent=city+' · آفلاین';
+   if(b)b.textContent=city+' · اتصال به هواشناسی برقرار نشد';
+  }
+ }
+}
+function chooseWeatherCity(){
+ const current=db.weatherCity||'تهران';
+ const city=prompt('نام شهر را وارد کن (مثلاً تهران، اصفهان یا شیراز):',current);
+ if(city===null)return;
+ const clean=city.trim();if(!clean){toast('نام شهر را وارد کن');return}
+ db.weatherCity=clean;save();loadWeather(true);
+}
+$('weatherHeader')?.addEventListener('click',chooseWeatherCity);
+$('weatherHomeBtn')?.addEventListener('click',chooseWeatherCity);
+loadWeather();setInterval(()=>loadWeather(true),30*60*1000);
+
 function renderAll(){D=day();renderHome();renderFood();renderRoutine();renderWalkHistory();renderProgress();renderProfile()}renderAll();
 // A fresh local day gets its own record automatically; habits start unchecked each day.
 
