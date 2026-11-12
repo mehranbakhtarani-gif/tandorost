@@ -710,6 +710,48 @@ body{background:radial-gradient(ellipse at 88% 0%,rgba(55,157,147,.18),transpare
 @media(prefers-reduced-motion:no-preference){.dash-card,.card,.stat{animation:glass-enter .48s cubic-bezier(.2,.75,.25,1) both}@keyframes glass-enter{from{opacity:.65;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
 
+
+/* Tandorost approved mobile glass layout — responsive containment */
+html,body{width:100%;min-width:0;max-width:100%;min-height:100%;margin:0;overflow-x:clip}
+body{overscroll-behavior-x:none}
+#appRoot.app,#appRoot.app.home-mode{
+ width:100%;max-width:520px;min-width:0;margin-inline:auto;
+ min-height:100svh;min-height:100dvh;
+ padding-top:max(10px,env(safe-area-inset-top));
+ padding-left:clamp(12px,4vw,18px);padding-right:clamp(12px,4vw,18px);
+ padding-bottom:calc(104px + env(safe-area-inset-bottom));
+ overflow-x:clip;
+}
+#appRoot>.tab{width:100%;max-width:100%;min-width:0;min-height:0;padding:8px 0 22px;overflow:visible}
+#appRoot .home-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#appRoot .dash-card,#appRoot .card,#appRoot .stat,#appRoot .quick-grid>*{min-width:0;max-width:100%}
+#appRoot .step-card,#appRoot .water-card{min-height:190px}
+#appRoot .mini-ring{width:clamp(94px,31vw,124px);height:clamp(94px,31vw,124px)}
+#appRoot .weekly-curve{max-width:100%}
+#appRoot .quick-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#appRoot .quick-grid button{min-width:0;overflow-wrap:anywhere}
+#nav.bottomnav{left:50%;right:auto;bottom:calc(8px + env(safe-area-inset-bottom));width:min(488px,calc(100% - 24px));max-width:calc(100% - 24px);transform:translateX(-50%);padding:7px 6px}
+#nav.bottomnav button{min-width:0}
+#appRoot .map-shell,#appRoot .real-map,#appRoot .leaflet-container{max-width:100%}
+#appRoot input,#appRoot select,#appRoot textarea{max-width:100%;min-width:0}
+@media(max-width:380px){
+ #appRoot.app,#appRoot.app.home-mode{padding-left:11px;padding-right:11px}
+ #appRoot .home-grid{gap:8px}
+ #appRoot .dash-card{padding:12px}
+ #appRoot .dash-title{font-size:11px}
+ #appRoot .step-card,#appRoot .water-card{min-height:178px}
+ #appRoot .mini-ring{width:94px;height:94px}
+ #appRoot .quick-grid{gap:6px}
+ #appRoot .quick-grid button{font-size:9px;padding:9px 3px}
+ #nav.bottomnav{width:calc(100% - 18px);max-width:calc(100% - 18px)}
+}
+@media(min-width:700px){
+ #appRoot.app,#appRoot.app.home-mode{padding-top:22px}
+ #appRoot>.tab{padding-top:12px}
+}
+@media(prefers-reduced-motion:reduce){
+ #appRoot *,#nav *{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
 </style></head>
 <body><main class="app home-mode" id="appRoot">
 <header><div class="brand"><small id="today"></small><h1>تندرست</h1><small>قدم‌های کوچک، حال بهتر 🌱</small></div><div class="header-actions"><button class="weather-chip" id="weatherHeader" type="button" aria-label="آب‌وهوا">🌤️ <span id="weatherHeaderText">آب‌وهوا</span></button><button class="install-btn" id="installBtn" hidden>نصب اپ</button><button class="iconbtn" id="themeBtn" aria-label="تغییر پوسته">☾</button></div></header>
