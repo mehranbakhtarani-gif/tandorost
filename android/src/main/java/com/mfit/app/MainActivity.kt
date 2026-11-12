@@ -186,7 +186,7 @@ private fun WeatherPanel(permissionGranted: Boolean, onRequestPermission: () -> 
     ) {
         Column(
             Modifier.fillMaxWidth()
-                .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF263D38), Color(0xFF172A28), Color(0xFF30483F))))
+                .glassSurface(RoundedCornerShape(22.dp), Color(0xFF263D38))
                 .padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -440,7 +440,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                     }
                     Tab.PROFILE -> {
                         SectionTitle("پروفایل", "اطلاعات شخصی و داده‌ها")
-                        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Color.White).padding(18.dp)) {
+                        Box(Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(24.dp)).padding(18.dp)) {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Text("اندازه‌های بدن", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Ink)
                                 OutlinedTextField(value = weight, onValueChange = { weight = it.filter { ch -> ch.isDigit() || ch == '.' || ch == ',' }.take(6) }, label = { Text("وزن (کیلوگرم)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -456,7 +456,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                                     colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = RoundedCornerShape(16.dp)) { Text("ذخیره اندازه‌ها") }
                             }
                         }
-                        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Color.White).padding(18.dp)) {
+                        Box(Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(24.dp)).padding(18.dp)) {
                             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Text("پشتیبان اطلاعات", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Ink)
                                 Text(if(imported) "فایل اطلاعات قبلی دریافت شده است." else "اطلاعات نسخه وب را با فایل JSON وارد کن.", color = Muted, fontSize = 12.sp)
@@ -476,11 +476,12 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
 @Composable
 private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)
+            .glassSurface(RoundedCornerShape(28.dp), Color(0xFFEAF4F1)),
         shape = RoundedCornerShape(28.dp),
-        color = Color(0xFFEAF4F1).copy(alpha = .78f),
-        shadowElevation = 14.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, MFitPalette.Stroke)
+        color = Color.Transparent,
+        shadowElevation = 0.dp,
+        border = null
     ) {
         Row(
             Modifier.fillMaxWidth().height(70.dp).padding(horizontal = 5.dp, vertical = 6.dp),
@@ -540,12 +541,7 @@ private fun HomeHero(tracking: Boolean, distance: Float, seconds: Long, onStart:
         label = "hero-glow-pulse"
     )
     Box(
-        Modifier.fillMaxWidth().height(246.dp).clip(RoundedCornerShape(30.dp))
-            .background(
-                androidx.compose.ui.graphics.Brush.linearGradient(
-                    listOf(Color(0xFF28332F), Color(0xFF111917), Color(0xFF17211E))
-                )
-            )
+        Modifier.fillMaxWidth().height(246.dp).glassSurface(RoundedCornerShape(30.dp), Color(0xFF24332E))
             .clickable(onClick = onStart).padding(22.dp)
     ) {
         Canvas(Modifier.fillMaxSize()) {
@@ -628,9 +624,7 @@ private fun SmartCoachPanel(
         else -> "ریتم خوبی داری؛ استمرار و خواب کافی را حفظ کن و لازم نیست هر روز شدت تمرین را بالا ببری."
     }
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp))
-            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF263D38), Color(0xFF172A28), Color(0xFF30483F))))
-            .border(1.dp, Color.White.copy(alpha = .25f), RoundedCornerShape(26.dp)).padding(18.dp),
+        Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(26.dp), Color(0xFF263D38)).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(13.dp)
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -671,7 +665,7 @@ private fun SmartCoachPanel(
 
 @Composable
 private fun DashboardStat(title: String, value: String, unit: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier) {
-    Row(modifier.clip(RoundedCornerShape(22.dp)).background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color.White.copy(alpha = .94f), Color(0xFFEAF2F0).copy(alpha = .76f)))).border(1.dp, Color.White.copy(alpha = .9f), RoundedCornerShape(22.dp)).padding(15.dp),
+    Row(modifier.glassSurface(RoundedCornerShape(22.dp), Color(0xFFEAF2F0)).padding(15.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
         Box(Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFFF0F3E9)), contentAlignment = Alignment.Center) {
             Icon(icon, null, tint = Ink, modifier = Modifier.size(21.dp))
@@ -688,7 +682,7 @@ private fun DashboardStat(title: String, value: String, unit: String, icon: andr
 
 @Composable
 private fun DashboardMini(title: String, value: String, unit: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier) {
-    Column(modifier.clip(RoundedCornerShape(22.dp)).background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color.White.copy(alpha = .94f), Color(0xFFEAF2F0).copy(alpha = .76f)))).border(1.dp, Color.White.copy(alpha = .9f), RoundedCornerShape(22.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+    Column(modifier.glassSurface(RoundedCornerShape(22.dp), Color(0xFFEAF2F0)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(title, fontSize = 12.sp, color = Muted)
             Icon(icon, null, tint = Muted, modifier = Modifier.size(18.dp))
@@ -747,6 +741,7 @@ private fun ActivityPanel(
         }
     }
     var hasCenteredOnRoute by remember(mapView) { mutableStateOf(false) }
+    var renderedRoute by remember(mapView) { mutableStateOf<List<Pair<Double, Double>>>(emptyList()) }
 
     DisposableEffect(mapView) {
         onDispose {
@@ -765,28 +760,30 @@ private fun ActivityPanel(
                 factory = { mapView },
                 modifier = Modifier.fillMaxWidth().height(260.dp),
                 update = { map ->
-                    if (routePoints.isNotEmpty()) {
-                        val geo = routePoints.map { GeoPoint(it.first, it.second) }
-                        routeLine.setPoints(geo)
-                        if (routeLine !in map.overlays) map.overlays.add(routeLine)
-                        currentMarker.position = geo.last()
-                        currentMarker.title = if (tracking) "موقعیت فعلی" else "پایان مسیر"
-                        if (currentMarker !in map.overlays) map.overlays.add(currentMarker)
-
-                        if (!hasCenteredOnRoute) {
-                            map.controller.setZoom(16.0)
-                            map.controller.setCenter(geo.last())
-                            hasCenteredOnRoute = true
-                        } else if (tracking) {
-                            // Animate rather than hard-jumping the camera on each GPS fix.
-                            map.controller.animateTo(geo.last())
+                    // The Activity timer can recompose every 250 ms; redraw only when the GPS route changes.
+                    if (routePoints != renderedRoute) {
+                        if (routePoints.isNotEmpty()) {
+                            val geo = routePoints.map { GeoPoint(it.first, it.second) }
+                            routeLine.setPoints(geo)
+                            if (routeLine !in map.overlays) map.overlays.add(routeLine)
+                            currentMarker.position = geo.last()
+                            currentMarker.title = if (tracking) "موقعیت فعلی" else "پایان مسیر"
+                            if (currentMarker !in map.overlays) map.overlays.add(currentMarker)
+                            if (!hasCenteredOnRoute) {
+                                map.controller.setZoom(16.0)
+                                map.controller.setCenter(geo.last())
+                                hasCenteredOnRoute = true
+                            } else if (tracking) {
+                                map.controller.animateTo(geo.last())
+                            }
+                        } else {
+                            map.overlays.remove(routeLine)
+                            map.overlays.remove(currentMarker)
+                            hasCenteredOnRoute = false
                         }
-                    } else {
-                        map.overlays.remove(routeLine)
-                        map.overlays.remove(currentMarker)
-                        hasCenteredOnRoute = false
+                        renderedRoute = routePoints
+                        map.invalidate()
                     }
-                    map.invalidate()
                 }
             )
             Row(
@@ -861,7 +858,7 @@ private fun RoutinePanel(
     val totalBurned = workoutLog.sumOf { it.substringAfterLast("|", "0").toDoubleOrNull() ?: 0.0 }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SectionTitle("روتین روزانه", "تمرین، خواب و مراقبت‌های روزمره")
-        Card(colors = CardDefaults.cardColors(containerColor = Ink), shape = RoundedCornerShape(24.dp)) {
+        Card(modifier = Modifier.glassSurface(RoundedCornerShape(24.dp), Ink), colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(24.dp)) {
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("کالری سوزانده‌شده با تمرین خانگی", color = Color.LightGray, fontSize = 12.sp)
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -872,7 +869,7 @@ private fun RoutinePanel(
             }
         }
         SectionTitle("آب‌رسانی روزانه", "هدف پیشنهادی: ۸ لیوان، هر لیوان حدود ۲۵۰ میلی‌لیتر")
-        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(22.dp)) {
+        Card(modifier = Modifier.glassSurface(RoundedCornerShape(22.dp)), colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(22.dp)) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column { Text("${waterGlasses} / 8 لیوان", fontSize = 24.sp, color = Ink, fontWeight = FontWeight.Black); Text("${waterGlasses * 250} میلی‌لیتر ثبت‌شده", color = Muted, fontSize = 11.sp) }
@@ -888,7 +885,7 @@ private fun RoutinePanel(
         }
         SectionTitle("عادت‌های امروز", "کارهای کوچک و قابل تکرار")
         val dailyHabits = listOf("حداقل ۱۵ دقیقه پیاده‌روی یا تحرک", "ثبت وعده‌های غذایی", "نوشیدن آب در طول روز", "خاموش‌کردن صفحه‌نمایش پیش از خواب")
-        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(22.dp)) {
+        Card(modifier = Modifier.glassSurface(RoundedCornerShape(22.dp)), colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(22.dp)) {
             Column(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
                 dailyHabits.forEachIndexed { index, label ->
                     Row(Modifier.fillMaxWidth().clickable { onHabitChange(index, !habitsDone.getOrElse(index) { false }) }.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -920,7 +917,7 @@ private fun RoutinePanel(
         }
         OutlinedTextField(value = minutes, onValueChange = { minutes = it.filter(Char::isDigit).take(3) },
             label = { Text("مدت تمرین (دقیقه)") }, suffix = { Text("min") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp)) {
+        Card(modifier = Modifier.glassSurface(RoundedCornerShape(20.dp)), colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(20.dp)) {
             Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("کالری تخمینی این تمرین", color = Muted, fontSize = 11.sp)
@@ -938,7 +935,7 @@ private fun RoutinePanel(
             SectionTitle("تمرین‌های ثبت‌شده امروز", "${workoutLog.size} جلسه")
             workoutLog.asReversed().forEach { entry ->
                 val parts = entry.split("|")
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp)).background(Color.White).padding(13.dp),
+                Row(Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(13.dp)).padding(13.dp),
                     horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text(parts.getOrNull(0) ?: "تمرین", color = Ink, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
@@ -950,7 +947,7 @@ private fun RoutinePanel(
         }
         HorizontalDivider(color = Color(0xFFE7E9E3))
         SectionTitle("خواب شبانه", "مدت استراحتت را ثبت کن")
-        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(22.dp)) {
+        Card(modifier = Modifier.glassSurface(RoundedCornerShape(22.dp)), colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(22.dp)) {
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("${sleep.toInt()} ساعت", color = Ink, fontSize = 32.sp, fontWeight = FontWeight.Black)
                 Slider(value = sleep, onValueChange = onSleepChange, valueRange = 0f..12f, steps = 23,
@@ -1046,7 +1043,7 @@ private val foods = listOf(
         }
         OutlinedTextField(value = amount, onValueChange = { onAmount(it); portion = null }, label = { Text("مقدار مصرف‌شده (گرم)") },
             modifier = Modifier.fillMaxWidth(), singleLine = true, suffix = { Text("g") })
-        Card(colors = CardDefaults.cardColors(containerColor = Ink), shape = RoundedCornerShape(24.dp)) {
+        Card(modifier = Modifier.glassSurface(RoundedCornerShape(24.dp), Ink), colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(24.dp)) {
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(selected?.name ?: "ابتدا یک غذا انتخاب کن", color = Color.LightGray, fontSize = 13.sp)
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -1076,7 +1073,7 @@ private val foods = listOf(
             Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text("ثبت در وعده امروز", color = Color.White)
         }
         SectionTitle("ترکیب مواد مغذی", "مقایسه مقدار پروتئین، کربوهیدرات و چربی ثبت‌شده")
-        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp)) {
+        Card(modifier = Modifier.glassSurface(RoundedCornerShape(20.dp)), colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(20.dp)) {
             Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 val macroMax = maxOf(todayProtein, todayCarbs, todayFat, 1.0)
                 MacroBar("پروتئین", todayProtein, macroMax, Color(0xFF7E9D62))
@@ -1085,7 +1082,7 @@ private val foods = listOf(
             }
         }
         SectionTitle("جمع ثبت‌شده امروز", "مجموع غذاهایی که در این روز وارد کرده‌ای")
-        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp)) {
+        Card(modifier = Modifier.glassSurface(RoundedCornerShape(20.dp)), colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(20.dp)) {
             Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("${todayKcal.toInt()} kcal", fontSize = 27.sp, fontWeight = FontWeight.Black, color = Ink)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -1102,7 +1099,7 @@ private val foods = listOf(
         SectionTitle("موارد ثبت‌شده", "امروز")
         if(log.isEmpty()) Text("هنوز غذایی ثبت نشده.", color = Muted, fontSize = 12.sp)
         log.asReversed().forEach { entry ->
-            Text(entry, modifier = Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(12.dp)).padding(12.dp), fontSize = 12.sp, color = Ink)
+            Text(entry, modifier = Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(12.dp)).padding(12.dp), fontSize = 12.sp, color = Ink)
         }
         Text("مقادیر این فهرست، مرجع عمومی و تقریبی بر پایه ۱۰۰ گرم بخش خوراکی هستند. نوع پخت و برند می‌تواند مقدار واقعی را تغییر دهد.", color = Muted, fontSize = 10.sp)
     }
@@ -1132,7 +1129,7 @@ private val foods = listOf(
     Column { Text(title, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = Ink); Text(subtitle, fontSize = 12.sp, color = Muted) }
 }
 @Composable private fun Metric(title: String, value: String, unit: String, modifier: Modifier = Modifier) {
-    Column(modifier.clip(RoundedCornerShape(18.dp)).background(Color.White).padding(15.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+    Column(modifier.glassSurface(RoundedCornerShape(18.dp)).padding(15.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
         Text(title, fontSize = 12.sp, color = Muted)
         Text(value, fontSize = 25.sp, fontWeight = FontWeight.Black, color = Ink)
         Text(unit, fontSize = 11.sp, color = Muted)
