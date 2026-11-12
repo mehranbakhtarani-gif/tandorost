@@ -8,6 +8,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -18,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
@@ -191,9 +194,17 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                         Text("M", fontWeight = FontWeight.Black, fontSize = 21.sp, color = Ink)
                     }
                 }
-                androidx.compose.animation.Crossfade(
+                AnimatedContent(
                     targetState = tab,
-                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 240),
+                    transitionSpec = {
+                        if (targetState.ordinal >= initialState.ordinal) {
+                            (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { it / 7 } + fadeIn(tween(240))) togetherWith
+                                (slideOutHorizontally(animationSpec = tween(170)) { -it / 10 } + fadeOut(tween(130)))
+                        } else {
+                            (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { -it / 7 } + fadeIn(tween(240))) togetherWith
+                                (slideOutHorizontally(animationSpec = tween(170)) { it / 10 } + fadeOut(tween(130)))
+                        }.using(SizeTransform(clip = false))
+                    },
                     label = "mfit-tab-transition"
                 ) { page ->
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -327,6 +338,10 @@ private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
         ) {
             Tab.values().forEach { item ->
                 val selected = selectedTab == item
+                val iconSize by animateDpAsState(if (selected) 23.dp else 19.dp, spring(stiffness = Spring.StiffnessMedium), label = "nav-icon-size")
+                val iconScale by animateFloatAsState(if (selected) 1.08f else 1f, spring(stiffness = Spring.StiffnessLow), label = "nav-icon-scale")
+                val indicatorColor by animateColorAsState(if (selected) Lime else Color.Transparent, tween(220), label = "nav-indicator")
+                val labelAlpha by animateFloatAsState(if (selected) 1f else .72f, tween(180), label = "nav-label-alpha")
                 Column(
                     Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(19.dp))
                         .clickable { onSelect(item) }.padding(vertical = 2.dp),
@@ -334,8 +349,8 @@ private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
                     verticalArrangement = Arrangement.Center
                 ) {
                     Box(
-                        Modifier.size(if (selected) 37.dp else 34.dp).clip(CircleShape)
-                            .background(if (selected) Lime else Color.Transparent),
+                        Modifier.size(if (selected) 39.dp else 34.dp).clip(CircleShape)
+                            .background(indicatorColor),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -348,7 +363,7 @@ private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
                             },
                             contentDescription = item.label,
                             tint = if (selected) Ink else Muted,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(iconSize).graphicsLayer { scaleX = iconScale; scaleY = iconScale }
                         )
                     }
                     Text(
@@ -356,6 +371,7 @@ private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
                         fontSize = 9.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                         color = if (selected) Ink else Muted,
+                        modifier = Modifier.graphicsLayer { alpha = labelAlpha },
                         maxLines = 1
                     )
                 }
@@ -366,6 +382,12 @@ private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
 
 @Composable
 private fun HomeHero(tracking: Boolean, distance: Float, seconds: Long, onStart: () -> Unit) {
+    val ringSweep by animateFloatAsState(if (tracking) 255f else 214f, spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioNoBouncy), label = "hero-ring-sweep")
+    val glowPulse = rememberInfiniteTransition(label = "hero-glow").animateFloat(
+        initialValue = .035f, targetValue = .11f,
+        animationSpec = infiniteRepeatable(tween(2200, easing = FastOutSlowInEasing), repeatMode = RepeatMode.Reverse),
+        label = "hero-glow-pulse"
+    )
     Box(
         Modifier.fillMaxWidth().height(246.dp).clip(RoundedCornerShape(30.dp))
             .background(
@@ -384,7 +406,7 @@ private fun HomeHero(tracking: Boolean, distance: Float, seconds: Long, onStart:
             drawCircle(Color(0xFF46534D), outer / 2, androidx.compose.ui.geometry.Offset(centerX, centerY),
                 style = androidx.compose.ui.graphics.drawscope.Stroke(10.dp.toPx()))
             drawArc(
-                color = Lime, startAngle = -90f, sweepAngle = if (tracking) 255f else 214f,
+                color = Lime, startAngle = -90f, sweepAngle = ringSweep,
                 useCenter = false,
                 topLeft = androidx.compose.ui.geometry.Offset(centerX - outer / 2, centerY - outer / 2),
                 size = androidx.compose.ui.geometry.Size(outer, outer),
@@ -408,7 +430,7 @@ private fun HomeHero(tracking: Boolean, distance: Float, seconds: Long, onStart:
                 size = androidx.compose.ui.geometry.Size(inner, inner),
                 style = androidx.compose.ui.graphics.drawscope.Stroke(7.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
             )
-            drawCircle(Lime.copy(alpha = .07f), 105.dp.toPx(), androidx.compose.ui.geometry.Offset(centerX, centerY))
+            drawCircle(Lime.copy(alpha = glowPulse.value), 105.dp.toPx(), androidx.compose.ui.geometry.Offset(centerX, centerY))
         }
         Column(
             Modifier.align(Alignment.CenterStart).fillMaxWidth(.64f),
@@ -886,13 +908,14 @@ private val foods = listOf(
 }
 
 @Composable private fun MacroBar(label: String, value: Double, maxValue: Double, color: Color) {
+    val progress by animateFloatAsState((value / maxValue).toFloat().coerceIn(0f, 1f), animationSpec = spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioNoBouncy), label = "macro-bar-$label")
     Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(label, fontSize = 12.sp, color = Ink, fontWeight = FontWeight.SemiBold)
             Text("%.1f g".format(java.util.Locale.US, value), fontSize = 11.sp, color = Muted)
         }
         Box(Modifier.fillMaxWidth().height(9.dp).clip(CircleShape).background(Color(0xFFEDEFEB))) {
-            Box(Modifier.fillMaxWidth((value / maxValue).toFloat().coerceIn(0f, 1f)).fillMaxHeight().clip(CircleShape).background(color))
+            Box(Modifier.fillMaxWidth(progress).fillMaxHeight().clip(CircleShape).background(color))
         }
     }
 }
