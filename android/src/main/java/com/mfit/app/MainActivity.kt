@@ -97,99 +97,216 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
         water = prefs.getInt("water_today", 0)
         mealLog = prefs.getString("meals_today", "")?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
         weight = prefs.getString("weight", "96") ?: "96"
+        sleep = prefs.getFloat("sleep_hours", 8f)
     }
     MaterialTheme(colorScheme = lightColorScheme(primary = Ink, secondary = Lime, background = Paper, surface = Color.White)) {
-        Scaffold(containerColor = Paper, bottomBar = {
-            NavigationBar(containerColor = Color.White, tonalElevation = 0.dp) {
-                Tab.values().forEach { item ->
-                    val selected = tab == item
-                    NavigationBarItem(selected = selected, onClick = { tab = item },
-                        icon = { Icon(when(item) {
-                            Tab.HOME -> Icons.Default.Home
-                            Tab.ACTIVITY -> Icons.Default.DirectionsRun
-                            Tab.FOOD -> Icons.Default.Restaurant
-                            Tab.SLEEP -> Icons.Default.Bedtime
-                            Tab.PROFILE -> Icons.Default.Person
-                        }, null) },
-                        label = { Text(item.label, fontSize = 10.sp, fontWeight = if(selected) FontWeight.Bold else FontWeight.Normal) },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Ink, indicatorColor = Lime, unselectedIconColor = Muted))
+        Scaffold(
+            containerColor = Paper,
+            bottomBar = {
+                NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
+                    Tab.values().forEach { item ->
+                        val selected = tab == item
+                        NavigationBarItem(
+                            selected = selected, onClick = { tab = item },
+                            icon = { Icon(when(item) {
+                                Tab.HOME -> Icons.Default.Home
+                                Tab.ACTIVITY -> Icons.Default.DirectionsRun
+                                Tab.FOOD -> Icons.Default.Restaurant
+                                Tab.SLEEP -> Icons.Default.Bedtime
+                                Tab.PROFILE -> Icons.Default.Person
+                            }, null) },
+                            label = { Text(item.label, fontSize = 10.sp, fontWeight = if(selected) FontWeight.Bold else FontWeight.Normal) },
+                            colors = NavigationBarItemDefaults.colors(selectedIconColor = Ink, indicatorColor = Lime, unselectedIconColor = Muted)
+                        )
+                    }
                 }
             }
-        }) { padding ->
-            Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 18.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column {
-                        Text("MFIT", fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp, color = Ink)
+        ) { padding ->
+            Column(
+                Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 22.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("M F I T", fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp, color = Ink)
                         Text(when(tab) {
-                            Tab.HOME -> "امروز رو بساز."
-                            Tab.ACTIVITY -> "حرکت کن."
-                            Tab.FOOD -> "هوشمندانه بخور."
-                            Tab.SLEEP -> "ریکاوری کن."
-                            Tab.PROFILE -> "مسیر تو."
+                            Tab.HOME -> "سلام، آماده‌ای؟"
+                            Tab.ACTIVITY -> "وقت حرکته."
+                            Tab.FOOD -> "سوخت بدنت."
+                            Tab.SLEEP -> "زمان ریکاوری."
+                            Tab.PROFILE -> "مسیر پیشرفت تو."
                         }, fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
                     }
-                    Box(Modifier.size(42.dp).clip(CircleShape).background(Lime), contentAlignment = Alignment.Center) { Text("M", fontWeight = FontWeight.Black, fontSize = 20.sp) }
+                    Box(Modifier.size(44.dp).clip(CircleShape).background(Lime), contentAlignment = Alignment.Center) {
+                        Text("M", fontWeight = FontWeight.Black, fontSize = 21.sp, color = Ink)
+                    }
                 }
                 when(tab) {
                     Tab.HOME -> {
-                        HeroPanel(tracking, distance, seconds)
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Metric("آب امروز", water.toString(), "لیوان", Modifier.weight(1f))
-                            Metric("آخرین فعالیت", lastActivity, "کیلومتر", Modifier.weight(1f))
+                        HomeHero(tracking, distance, seconds, onStart = { tab = Tab.ACTIVITY; onStart() })
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            DashboardStat("آب امروز", water.toString(), "لیوان", Icons.Default.WaterDrop, Modifier.weight(1f))
+                            DashboardStat("آخرین فعالیت", if(lastActivity == "—") "—" else lastActivity, "کیلومتر", Icons.Default.DirectionsRun, Modifier.weight(1f))
                         }
-                        SectionTitle("عادت امروز", "هر روز کمی بهتر")
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Button(onClick = { water++; prefs.edit().putInt("water_today", water).apply() },
-                                colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = RoundedCornerShape(14.dp)) {
-                                Icon(Icons.Default.WaterDrop, null); Spacer(Modifier.width(6.dp)); Text("ثبت آب")
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text("سلامت روزانه", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
+                                Text("چیزهای کوچکی که جمع می‌شوند.", fontSize = 12.sp, color = Muted)
                             }
-                            OutlinedButton(onClick = { tab = Tab.ACTIVITY }, shape = RoundedCornerShape(14.dp)) {
-                                Icon(Icons.Default.DirectionsRun, null); Spacer(Modifier.width(6.dp)); Text("شروع فعالیت")
-                            }
+                            Text("OVERVIEW", fontSize = 10.sp, letterSpacing = 1.5.sp, color = Muted, fontWeight = FontWeight.Bold)
                         }
-                        SectionTitle("خلاصه امروز", "پیشرفتت رو دنبال کن")
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Metric("خواب", sleep.toInt().toString(), "ساعت", Modifier.weight(1f))
-                            Metric("وزن", weight, "کیلوگرم", Modifier.weight(1f))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            DashboardMini("خواب", sleep.toInt().toString(), "ساعت", Icons.Default.Bedtime, Modifier.weight(1f))
+                            DashboardMini("وزن", weight, "کیلوگرم", Icons.Default.MonitorWeight, Modifier.weight(1f))
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Button(
+                                onClick = { water++; prefs.edit().putInt("water_today", water).apply() },
+                                modifier = Modifier.weight(1f).height(54.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = RoundedCornerShape(18.dp)
+                            ) { Icon(Icons.Default.WaterDrop, null); Spacer(Modifier.width(7.dp)); Text("ثبت آب") }
+                            OutlinedButton(
+                                onClick = { tab = Tab.FOOD },
+                                modifier = Modifier.weight(1f).height(54.dp),
+                                shape = RoundedCornerShape(18.dp)
+                            ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text("ثبت غذا") }
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("فعالیت بعدی؟", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
+                            TextButton(onClick = { tab = Tab.ACTIVITY }) { Text("مشاهده فعالیت", color = Ink) }
+                        }
+                        Box(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
+                                .background(Color(0xFFE8EDE4)).clickable { tab = Tab.ACTIVITY }.padding(18.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                Box(Modifier.size(52.dp).clip(CircleShape).background(Lime), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.DirectionsRun, null, tint = Ink, modifier = Modifier.size(28.dp))
+                                }
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    Text("پیاده‌روی و دویدن", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Ink)
+                                    Text("مسیرت رو با GPS ثبت کن", fontSize = 12.sp, color = Muted)
+                                }
+                                Icon(Icons.Default.ArrowForward, null, tint = Ink)
+                            }
                         }
                     }
                     Tab.ACTIVITY -> {
                         ActivityPanel(tracking, distance, seconds, onStart, onStop)
                         SectionTitle("آخرین رکورد", "فعالیت ذخیره‌شده")
-                        Metric("مسافت آخرین فعالیت", lastActivity, "کیلومتر", Modifier.fillMaxWidth())
+                        DashboardStat("مسافت آخرین فعالیت", lastActivity, "کیلومتر", Icons.Default.Route, Modifier.fillMaxWidth())
                     }
                     Tab.FOOD -> FoodPanel(meal, { meal = it }, amount, { amount = it }, mealLog, { value ->
                         mealLog = mealLog + value
                         prefs.edit().putString("meals_today", mealLog.joinToString("|")).apply()
                     })
                     Tab.SLEEP -> {
-                        SectionTitle("ریکاوری", "خواب شبانه رو ثبت کن")
-                        Text("مدت خواب (ساعت)", color = Muted)
-                        Slider(value = sleep, onValueChange = { sleep = it }, valueRange = 0f..12f, steps = 23)
-                        Text(sleep.toInt().toString() + " ساعت", fontSize = 34.sp, fontWeight = FontWeight.Black)
-                        Text("کیفیت خواب", fontWeight = FontWeight.Bold)
+                        SectionTitle("خواب شبانه", "مدت و کیفیت استراحتت رو ثبت کن")
+                        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(Ink).padding(22.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text("SLEEP DURATION", color = Lime, fontSize = 10.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
+                                Text(sleep.toInt().toString() + " ساعت", color = Color.White, fontSize = 42.sp, fontWeight = FontWeight.Black)
+                                Slider(value = sleep, onValueChange = { sleep = it; prefs.edit().putFloat("sleep_hours", it).apply() }, valueRange = 0f..12f, steps = 23,
+                                    colors = SliderDefaults.colors(thumbColor = Lime, activeTrackColor = Lime, inactiveTrackColor = Color.DarkGray))
+                                Text("مدت خواب رو با کشیدن نوار تنظیم کن.", color = Color.LightGray, fontSize = 12.sp)
+                            }
+                        }
+                        Text("کیفیت خواب", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Ink)
+                        var quality by remember { mutableStateOf(prefs.getString("sleep_quality", "خوب") ?: "خوب") }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf("ضعیف", "معمولی", "خوب", "عالی").forEach {
-                                AssistChip(onClick = { prefs.edit().putString("sleep_quality", it).apply() }, label = { Text(it) })
+                            listOf("ضعیف", "معمولی", "خوب", "عالی").forEach { q ->
+                                FilterChip(selected = quality == q, onClick = { quality = q; prefs.edit().putString("sleep_quality", q).apply() }, label = { Text(q) })
                             }
                         }
                     }
                     Tab.PROFILE -> {
-                        SectionTitle("پروفایل", "اطلاعات و انتقال داده‌ها")
-                        OutlinedTextField(value = weight, onValueChange = { weight = it }, label = { Text("وزن فعلی (کیلوگرم)") }, modifier = Modifier.fillMaxWidth())
-                        Button(onClick = { prefs.edit().putString("weight", weight).apply() }, colors = ButtonDefaults.buttonColors(containerColor = Ink)) { Text("ذخیره پروفایل") }
-                        Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("انتقال اطلاعات نسخه وب", fontWeight = FontWeight.Bold)
-                                Text(if(imported) "فایل اطلاعات قبلی دریافت شده است." else "فایل پشتیبان JSON نسخه PWA را انتخاب کن.", color = Muted)
-                                OutlinedButton(onClick = onImport) { Text("وارد کردن فایل پشتیبان") }
+                        SectionTitle("پروفایل", "اطلاعات شخصی و داده‌ها")
+                        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Color.White).padding(18.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text("وزن فعلی", fontSize = 14.sp, color = Muted)
+                                OutlinedTextField(value = weight, onValueChange = { weight = it }, label = { Text("کیلوگرم") }, modifier = Modifier.fillMaxWidth())
+                                Button(onClick = { prefs.edit().putString("weight", weight).apply() }, modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = RoundedCornerShape(16.dp)) { Text("ذخیره تغییرات") }
+                            }
+                        }
+                        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Color.White).padding(18.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text("پشتیبان اطلاعات", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Ink)
+                                Text(if(imported) "فایل اطلاعات قبلی دریافت شده است." else "اطلاعات نسخه وب را با فایل JSON وارد کن.", color = Muted, fontSize = 12.sp)
+                                OutlinedButton(onClick = onImport) { Icon(Icons.Default.FileUpload, null); Spacer(Modifier.width(8.dp)); Text("وارد کردن فایل پشتیبان") }
                             }
                         }
                     }
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(14.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun HomeHero(tracking: Boolean, distance: Float, seconds: Long, onStart: () -> Unit) {
+    Box(
+        Modifier.fillMaxWidth().height(236.dp).clip(RoundedCornerShape(30.dp))
+            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF22282A), Color(0xFF101415))))
+            .clickable(onClick = onStart).padding(22.dp)
+    ) {
+        Canvas(Modifier.fillMaxSize()) {
+            val stroke = 9.dp.toPx()
+            drawCircle(color = Color(0xFF3D4543), radius = 70.dp.toPx(), style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
+            drawArc(color = Lime, startAngle = -90f, sweepAngle = 118f, useCenter = false,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round),
+                topLeft = androidx.compose.ui.geometry.Offset(size.width - 164.dp.toPx(), 20.dp.toPx()),
+                size = androidx.compose.ui.geometry.Size(140.dp.toPx(), 140.dp.toPx()))
+            drawCircle(color = Lime.copy(alpha = .08f), radius = 105.dp.toPx(), center = androidx.compose.ui.geometry.Offset(size.width - 94.dp.toPx(), 90.dp.toPx()))
+        }
+        Column(Modifier.align(Alignment.CenterStart).fillMaxWidth(.66f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("YOUR HEALTH. YOUR PACE.", color = Lime, fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
+            Text(if(tracking) "در حال ثبت فعالیت" else "قوی‌تر از دیروز.", color = Color.White, fontSize = 27.sp, fontWeight = FontWeight.Black, lineHeight = 32.sp)
+            Text(if(tracking) "%.2f km  •  %02d:%02d".format(distance / 1000f, seconds / 60, seconds % 60) else "هر حرکت کوچیک، یک قدم رو به جلوست.", color = Color(0xFFB9C0BC), fontSize = 12.sp)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                Box(Modifier.size(34.dp).clip(CircleShape).background(Lime), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.PlayArrow, null, tint = Ink)
+                }
+                Text(if(tracking) "مشاهده فعالیت" else "شروع فعالیت", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        Text("M", Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp), color = Lime.copy(alpha = .85f), fontSize = 12.sp, fontWeight = FontWeight.Black)
+    }
+}
+
+@Composable
+private fun DashboardStat(title: String, value: String, unit: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier) {
+    Row(modifier.clip(RoundedCornerShape(22.dp)).background(Color.White).padding(15.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+        Box(Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFFF0F3E9)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = Ink, modifier = Modifier.size(21.dp))
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, fontSize = 11.sp, color = Muted)
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(value, fontSize = 22.sp, fontWeight = FontWeight.Black, color = Ink)
+                Text(unit, fontSize = 10.sp, color = Muted, modifier = Modifier.padding(bottom = 3.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun DashboardMini(title: String, value: String, unit: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier) {
+    Column(modifier.clip(RoundedCornerShape(22.dp)).background(Color.White).padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(title, fontSize = 12.sp, color = Muted)
+            Icon(icon, null, tint = Muted, modifier = Modifier.size(18.dp))
+        }
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(value, fontSize = 27.sp, fontWeight = FontWeight.Black, color = Ink)
+            Text(unit, fontSize = 10.sp, color = Muted, modifier = Modifier.padding(bottom = 4.dp))
         }
     }
 }
