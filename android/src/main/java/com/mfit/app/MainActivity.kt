@@ -470,6 +470,13 @@ private fun DashboardMini(title: String, value: String, unit: String, icon: andr
         Metric("مسافت", "%.2f".format(distance / 1000f), "کیلومتر", Modifier.weight(1f))
         Metric("زمان", "%02d:%02d".format(seconds / 60, seconds % 60), "دقیقه:ثانیه", Modifier.weight(1f))
     }
+    val km = distance / 1000f
+    val avgSpeed = if (seconds > 0L && km > 0f) km / (seconds / 3600f) else 0f
+    val paceSeconds = if (km > 0f) seconds / km else 0f
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Metric("سرعت میانگین", "%.1f".format(java.util.Locale.US, avgSpeed), "km/h", Modifier.weight(1f))
+        Metric("ریتم میانگین", if (paceSeconds.isFinite() && paceSeconds > 0f) "%d:%02d".format((paceSeconds / 60).toInt(), (paceSeconds % 60).toInt()) else "—", "دقیقه / کیلومتر", Modifier.weight(1f))
+    }
     if (activityHistory.isNotEmpty()) {
         SectionTitle("سابقه فعالیت‌ها", "آخرین فعالیت‌های ثبت‌شده با GPS")
         activityHistory.take(7).forEach { item ->
@@ -696,6 +703,15 @@ private val foods = listOf(
             colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = RoundedCornerShape(17.dp)) {
             Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text("ثبت در وعده امروز", color = Color.White)
         }
+        SectionTitle("ترکیب مواد مغذی", "مقایسه مقدار پروتئین، کربوهیدرات و چربی ثبت‌شده")
+        Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp)) {
+            Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                val macroMax = maxOf(todayProtein, todayCarbs, todayFat, 1.0)
+                MacroBar("پروتئین", todayProtein, macroMax, Color(0xFF7E9D62))
+                MacroBar("کربوهیدرات", todayCarbs, macroMax, Color(0xFFDBA34A))
+                MacroBar("چربی", todayFat, macroMax, Color(0xFF7896B5))
+            }
+        }
         SectionTitle("جمع ثبت‌شده امروز", "مجموع غذاهایی که در این روز وارد کرده‌ای")
         Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp)) {
             Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -717,6 +733,18 @@ private val foods = listOf(
             Text(entry, modifier = Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(12.dp)).padding(12.dp), fontSize = 12.sp, color = Ink)
         }
         Text("مقادیر این فهرست، مرجع عمومی و تقریبی بر پایه ۱۰۰ گرم بخش خوراکی هستند. نوع پخت و برند می‌تواند مقدار واقعی را تغییر دهد.", color = Muted, fontSize = 10.sp)
+    }
+}
+
+@Composable private fun MacroBar(label: String, value: Double, maxValue: Double, color: Color) {
+    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, fontSize = 12.sp, color = Ink, fontWeight = FontWeight.SemiBold)
+            Text("%.1f g".format(java.util.Locale.US, value), fontSize = 11.sp, color = Muted)
+        }
+        Box(Modifier.fillMaxWidth().height(9.dp).clip(CircleShape).background(Color(0xFFEDEFEB))) {
+            Box(Modifier.fillMaxWidth((value / maxValue).toFloat().coerceIn(0f, 1f)).fillMaxHeight().clip(CircleShape).background(color))
+        }
     }
 }
 
