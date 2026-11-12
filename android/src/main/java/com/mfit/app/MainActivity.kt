@@ -187,27 +187,27 @@ private fun WeatherPanel(permissionGranted: Boolean, onRequestPermission: () -> 
     ) {
         Column(
             Modifier.fillMaxWidth()
-                .glassSurface(RoundedCornerShape(22.dp), Color(0xFF263D38))
+                .glassSurface(RoundedCornerShape(22.dp), Color(0xFFEAF5F0))
                 .padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text("آب‌وهوای زنده", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text("شرایط بیرون برای برنامه‌ریزی فعالیت", color = Color.White.copy(alpha = .72f), fontSize = 11.sp)
+                    Text("آب‌وهوای زنده", color = Ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("شرایط بیرون برای برنامه‌ریزی فعالیت", color = Muted, fontSize = 11.sp)
                 }
-                Icon(Icons.Default.WbSunny, contentDescription = null, tint = Color(0xFFD9F28A), modifier = Modifier.size(28.dp))
+                Icon(Icons.Default.WbSunny, contentDescription = null, tint = MFitPalette.Eating, modifier = Modifier.size(28.dp))
             }
             if (weather != null) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("${weather!!.temperature.toInt()}°", color = Color.White, fontSize = 42.sp, fontWeight = FontWeight.Black)
-                        Text(weatherDescription(weather!!.code), color = Color.White.copy(alpha = .88f), fontSize = 13.sp)
+                        Text("${weather!!.temperature.toInt()}°", color = Ink, fontSize = 42.sp, fontWeight = FontWeight.Black)
+                        Text(weatherDescription(weather!!.code), color = Muted, fontSize = 13.sp)
                     }
                     Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text("حس‌شده ${weather!!.feelsLike.toInt()}°", color = Color.White, fontSize = 12.sp)
-                        Text("رطوبت ${weather!!.humidity}٪", color = Color.White.copy(alpha = .82f), fontSize = 11.sp)
-                        Text("باد ${weather!!.wind.toInt()} km/h", color = Color.White.copy(alpha = .82f), fontSize = 11.sp)
+                        Text("حس‌شده ${weather!!.feelsLike.toInt()}°", color = Ink, fontSize = 12.sp)
+                        Text("رطوبت ${weather!!.humidity}٪", color = Muted, fontSize = 11.sp)
+                        Text("باد ${weather!!.wind.toInt()} km/h", color = Muted, fontSize = 11.sp)
                     }
                 }
             } else {
@@ -217,7 +217,7 @@ private fun WeatherPanel(permissionGranted: Boolean, onRequestPermission: () -> 
                         !permissionGranted -> "برای نمایش هوای موقعیت فعلی، دسترسی مکان لازم است."
                         else -> error ?: "اطلاعات هواشناسی در دسترس نیست."
                     },
-                    color = Color.White.copy(alpha = .86f), fontSize = 12.sp
+                    color = Muted, fontSize = 12.sp
                 )
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -227,7 +227,7 @@ private fun WeatherPanel(permissionGranted: Boolean, onRequestPermission: () -> 
                 ) {
                     Icon(if (permissionGranted) Icons.Default.Refresh else Icons.Default.MyLocation, null, tint = Color(0xFFD9F28A))
                     Spacer(Modifier.width(6.dp))
-                    Text(if (permissionGranted) "به‌روزرسانی" else "فعال‌کردن موقعیت", color = Color(0xFFD9F28A))
+                    Text(if (permissionGranted) "به‌روزرسانی" else "فعال‌کردن موقعیت", color = Lime)
                 }
             }
         }
@@ -320,7 +320,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
         Scaffold(
             modifier = Modifier.background(
                 androidx.compose.ui.graphics.Brush.linearGradient(
-                    listOf(Color(0xFF080B09), Color(0xFF101713), Color(0xFF080B09))
+                    listOf(Color(0xFFE6F1ED), Color(0xFFF1F8F4), Color(0xFFDCEBE5))
                 )
             ),
             containerColor = Color.Transparent,
@@ -337,7 +337,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text("M F I T  /  WELLNESS", fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.2.sp, color = Lime)
+                        Text("T A N D O R O S T  /  WELLNESS", fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp, color = Lime)
                         if (tab == Tab.HOME) Text(java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("EEEE, dd MMM", java.util.Locale.ENGLISH)).uppercase(), fontSize = 9.sp, letterSpacing = 1.6.sp, color = Muted)
                         Text(when(tab) {
                             Tab.HOME -> "روزت را زندگی کن."
@@ -347,8 +347,8 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                             Tab.PROFILE -> "مسیر پیشرفت تو."
                         }, fontSize = if (tab == Tab.HOME) 29.sp else 25.sp, fontWeight = FontWeight.ExtraBold, color = Ink, lineHeight = 36.sp)
                     }
-                    Box(Modifier.size(44.dp).clip(CircleShape).background(Lime), contentAlignment = Alignment.Center) {
-                        Text("M", fontWeight = FontWeight.Black, fontSize = 21.sp, color = Color(0xFF101510))
+                    Box(Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = .72f)).border(1.dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
+                        Text("T", fontWeight = FontWeight.Black, fontSize = 21.sp, color = Ink)
                     }
                 }
                 AnimatedContent(
@@ -495,7 +495,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
 private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)
-            .glassSurface(RoundedCornerShape(28.dp), Color(0xFF17211B)),
+            .glassSurface(RoundedCornerShape(28.dp), Color(0xFFEAF5F0)),
         shape = RoundedCornerShape(28.dp),
         color = Color.Transparent,
         shadowElevation = 0.dp,
@@ -532,7 +532,7 @@ private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
                                 Tab.PROFILE -> Icons.Default.Person
                             },
                             contentDescription = item.label,
-                            tint = if (selected) Color(0xFF101510) else Muted,
+                            tint = if (selected) Color.White else Muted,
                             modifier = Modifier.size(iconSize).graphicsLayer { scaleX = iconScale; scaleY = iconScale }
                         )
                     }
@@ -559,7 +559,7 @@ private fun HomeHero(tracking: Boolean, distance: Float, seconds: Long, onStart:
         label = "hero-glow-pulse"
     )
     Box(
-        Modifier.fillMaxWidth().height(292.dp).glassSurface(RoundedCornerShape(34.dp), Color(0xFF18241D))
+        Modifier.fillMaxWidth().height(292.dp).glassSurface(RoundedCornerShape(34.dp), Color(0xFFF5FBF8))
             .clickable(onClick = onStart).padding(22.dp)
     ) {
         Canvas(Modifier.fillMaxSize()) {
@@ -568,28 +568,28 @@ private fun HomeHero(tracking: Boolean, distance: Float, seconds: Long, onStart:
             val outer = 146.dp.toPx()
             val middle = 116.dp.toPx()
             val inner = 86.dp.toPx()
-            drawCircle(Color(0xFF46534D), outer / 2, androidx.compose.ui.geometry.Offset(centerX, centerY),
+            drawCircle(Ink.copy(alpha = .12f), outer / 2, androidx.compose.ui.geometry.Offset(centerX, centerY),
                 style = androidx.compose.ui.graphics.drawscope.Stroke(10.dp.toPx()))
             drawArc(
-                color = Lime, startAngle = -90f, sweepAngle = ringSweep,
+                color = MFitPalette.Movement, startAngle = -90f, sweepAngle = ringSweep,
                 useCenter = false,
                 topLeft = androidx.compose.ui.geometry.Offset(centerX - outer / 2, centerY - outer / 2),
                 size = androidx.compose.ui.geometry.Size(outer, outer),
                 style = androidx.compose.ui.graphics.drawscope.Stroke(10.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
             )
-            drawCircle(Color(0xFF46534D), middle / 2, androidx.compose.ui.geometry.Offset(centerX, centerY),
+            drawCircle(Ink.copy(alpha = .12f), middle / 2, androidx.compose.ui.geometry.Offset(centerX, centerY),
                 style = androidx.compose.ui.graphics.drawscope.Stroke(8.dp.toPx()))
             drawArc(
-                color = Color(0xFF8DB7A0), startAngle = -90f, sweepAngle = 172f,
+                color = MFitPalette.Water, startAngle = -90f, sweepAngle = 172f,
                 useCenter = false,
                 topLeft = androidx.compose.ui.geometry.Offset(centerX - middle / 2, centerY - middle / 2),
                 size = androidx.compose.ui.geometry.Size(middle, middle),
                 style = androidx.compose.ui.graphics.drawscope.Stroke(8.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
             )
-            drawCircle(Color(0xFF46534D), inner / 2, androidx.compose.ui.geometry.Offset(centerX, centerY),
+            drawCircle(Ink.copy(alpha = .12f), inner / 2, androidx.compose.ui.geometry.Offset(centerX, centerY),
                 style = androidx.compose.ui.graphics.drawscope.Stroke(7.dp.toPx()))
             drawArc(
-                color = Color(0xFFB6C6A1), startAngle = -90f, sweepAngle = 112f,
+                color = MFitPalette.Eating, startAngle = -90f, sweepAngle = 112f,
                 useCenter = false,
                 topLeft = androidx.compose.ui.geometry.Offset(centerX - inner / 2, centerY - inner / 2),
                 size = androidx.compose.ui.geometry.Size(inner, inner),
@@ -604,18 +604,18 @@ private fun HomeHero(tracking: Boolean, distance: Float, seconds: Long, onStart:
             Text("YOUR DAILY WELLNESS", color = Lime, fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
             Text(
                 if (tracking) "در حال ثبت فعالیت" else "امروز، برای خودت وقت بذار.",
-                color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black, lineHeight = 31.sp
+                color = Ink, fontSize = 25.sp, fontWeight = FontWeight.Black, lineHeight = 31.sp
             )
             Text(
                 if (tracking) "%.2f km  •  %02d:%02d".format(distance / 1000f, seconds / 60, seconds % 60)
                 else "حرکت، تغذیه و ریکاوری؛ همه در یک مسیر.",
-                color = Color(0xFFC2CCC5), fontSize = 11.sp, lineHeight = 17.sp
+                color = Muted, fontSize = 11.sp, lineHeight = 17.sp
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.size(34.dp).clip(CircleShape).background(Lime), contentAlignment = Alignment.Center) {
                     Icon(Icons.Default.PlayArrow, null, tint = Ink)
                 }
-                Text(if (tracking) "مشاهده فعالیت" else "شروع فعالیت", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(if (tracking) "مشاهده فعالیت" else "شروع فعالیت", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
         Text(
@@ -732,42 +732,42 @@ private fun SmartCoachPanel(
         else -> "ریتم خوبی داری؛ استمرار و خواب کافی را حفظ کن و لازم نیست هر روز شدت تمرین را بالا ببری."
     }
     Column(
-        Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(26.dp), Color(0xFF263D38)).padding(18.dp),
+        Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(26.dp), Color(0xFFEAF5F0)).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(13.dp)
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text("M FIT • SMART COACH", color = Lime, fontSize = 9.sp, letterSpacing = 1.6.sp, fontWeight = FontWeight.Bold)
-                Text("مربی هوشمند روزانه", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                Text("مربی هوشمند روزانه", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
             }
-            Box(Modifier.size(48.dp).clip(CircleShape).background(Color.White.copy(alpha = .12f)).border(1.dp, Color.White.copy(alpha = .3f), CircleShape), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(48.dp).clip(CircleShape).background(Color.White.copy(alpha = .72f)).border(1.dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
                 Text("$recovery", color = Lime, fontSize = 18.sp, fontWeight = FontWeight.Black)
             }
         }
-        Text("شاخص آمادگی تخمینی • $recovery از ۱۰۰", color = Color(0xFFD5E2DA), fontSize = 11.sp)
-        Box(Modifier.fillMaxWidth().height(7.dp).clip(CircleShape).background(Color.White.copy(alpha = .14f))) {
+        Text("شاخص آمادگی تخمینی • $recovery از ۱۰۰", color = Muted, fontSize = 11.sp)
+        Box(Modifier.fillMaxWidth().height(7.dp).clip(CircleShape).background(Ink.copy(alpha = .10f))) {
             Box(Modifier.fillMaxWidth(recovery / 100f).fillMaxHeight().clip(CircleShape).background(Lime))
         }
-        Text(advice, color = Color.White, fontSize = 13.sp, lineHeight = 21.sp, fontWeight = FontWeight.Medium)
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(17.dp)).background(Color.White.copy(alpha = .10f)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Text(advice, color = Ink, fontSize = 13.sp, lineHeight = 21.sp, fontWeight = FontWeight.Medium)
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(17.dp)).background(Color.White.copy(alpha = .66f)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("گزارش ثبت‌شده اخیر", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("گزارش ثبت‌شده اخیر", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text("$weeklyDays روز", color = Lime, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column { Text("کالری تمرین", color = Color(0xFFB8C9C0), fontSize = 9.sp); Text("$weeklyWorkoutCalories kcal", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
-                Column { Text("میانگین آب", color = Color(0xFFB8C9C0), fontSize = 9.sp); Text("$weeklyAverageWater لیوان/روز", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                Column { Text("کالری تمرین", color = Color(0xFFB8C9C0), fontSize = 9.sp); Text("$weeklyWorkoutCalories kcal", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                Column { Text("میانگین آب", color = Color(0xFFB8C9C0), fontSize = 9.sp); Text("$weeklyAverageWater لیوان/روز", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            OutlinedButton(onClick = onFood, modifier = Modifier.weight(1f), border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .35f)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
+            OutlinedButton(onClick = onFood, modifier = Modifier.weight(1f), border = androidx.compose.foundation.BorderStroke(1.dp, Lime.copy(alpha = .55f)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Ink)) {
                 Icon(Icons.Default.Restaurant, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text("تحلیل تغذیه", fontSize = 11.sp)
             }
             OutlinedButton(onClick = onRoutine, modifier = Modifier.weight(1f), border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .35f)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
                 Icon(Icons.Default.Bedtime, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text("ریکاوری و روتین", fontSize = 11.sp)
             }
         }
-        Text("این امتیاز یک برآورد محلی بر اساس خواب، آب و عادت‌های ثبت‌شده است؛ داده حسگر یا تشخیص پزشکی نیست.", color = Color(0xFFB8C9C0), fontSize = 9.sp, lineHeight = 14.sp)
+        Text("این امتیاز یک برآورد محلی بر اساس خواب، آب و عادت‌های ثبت‌شده است؛ داده حسگر یا تشخیص پزشکی نیست.", color = Muted, fontSize = 9.sp, lineHeight = 14.sp)
     }
 }
 
@@ -803,12 +803,12 @@ private fun DashboardMini(title: String, value: String, unit: String, icon: andr
 }
 
 @Composable private fun HeroPanel(tracking: Boolean, distance: Float, seconds: Long) {
-    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Ink).padding(22.dp)) {
+    Box(Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(24.dp), Color(0xFFF4FAF6)).padding(22.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("YOUR DAILY PERFORMANCE", color = Lime, fontSize = 10.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
-            Text(if(tracking) "در حال حرکت" else "امروز، روز توست", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Black)
-            Text(if(tracking) "%.2f کیلومتر • %02d:%02d".format(distance / 1000f, seconds / 60, seconds % 60) else "قدم‌های کوچک، نتیجه‌های بزرگ.", color = Color.LightGray, fontSize = 14.sp)
-            Box(Modifier.fillMaxWidth().height(5.dp).clip(CircleShape).background(Color(0xFF44494A))) {
+            Text(if(tracking) "در حال حرکت" else "امروز، روز توست", color = Ink, fontSize = 28.sp, fontWeight = FontWeight.Black)
+            Text(if(tracking) "%.2f کیلومتر • %02d:%02d".format(distance / 1000f, seconds / 60, seconds % 60) else "قدم‌های کوچک، نتیجه‌های بزرگ.", color = Muted, fontSize = 14.sp)
+            Box(Modifier.fillMaxWidth().height(5.dp).clip(CircleShape).background(Ink.copy(alpha = .12f))) {
                 Box(Modifier.fillMaxWidth(if(tracking) (distance / 5000f).coerceIn(.05f, 1f) else .34f).fillMaxHeight().clip(CircleShape).background(Lime))
             }
         }
@@ -996,14 +996,14 @@ private fun RoutinePanel(
     }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SectionTitle("روتین روزانه", "تمرین، خواب و مراقبت‌های روزمره")
-        Card(modifier = Modifier.glassSurface(RoundedCornerShape(24.dp), Ink), colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(24.dp)) {
+        Card(modifier = Modifier.glassSurface(RoundedCornerShape(24.dp), Color(0xFFEAF5F0)), colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(24.dp)) {
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("کالری سوزانده‌شده با تمرین خانگی", color = Color.LightGray, fontSize = 12.sp)
+                Text("کالری سوزانده‌شده با تمرین خانگی", color = Muted, fontSize = 12.sp)
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(totalBurned.toInt().toString(), color = Lime, fontSize = 38.sp, fontWeight = FontWeight.Black)
-                    Text("kcal امروز", color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(bottom = 7.dp))
+                    Text("kcal امروز", color = Ink, fontSize = 12.sp, modifier = Modifier.padding(bottom = 7.dp))
                 }
-                Text("برآورد بر اساس نوع تمرین، مدت و وزن پروفایل", color = Color.LightGray, fontSize = 10.sp)
+                Text("برآورد بر اساس نوع تمرین، مدت و وزن پروفایل", color = Muted, fontSize = 10.sp)
             }
         }
         SectionTitle("آب‌رسانی روزانه", "هدف پیشنهادی: ۸ لیوان، هر لیوان حدود ۲۵۰ میلی‌لیتر")
@@ -1235,22 +1235,22 @@ private val foods = listOf(
             modifier = Modifier.fillMaxWidth(), singleLine = true, suffix = { Text("g") })
         Card(modifier = Modifier.glassSurface(RoundedCornerShape(24.dp), Ink), colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(24.dp)) {
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(selected?.name ?: "ابتدا یک غذا انتخاب کن", color = Color.LightGray, fontSize = 13.sp)
+                Text(selected?.name ?: "ابتدا یک غذا انتخاب کن", color = Muted, fontSize = 13.sp)
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text(if(selected == null) "—" else kcal.toInt().toString(), color = Lime, fontSize = 38.sp, fontWeight = FontWeight.Black)
-                    Text("کیلوکالری", color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(bottom = 7.dp))
+                    Text(if(selected == null) "—" else kcal.toInt().toString(), color = Ink, fontSize = 38.sp, fontWeight = FontWeight.Black)
+                    Text("کیلوکالری", color = Muted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 7.dp))
                     Spacer(Modifier.weight(1f))
-                    Text(if(selected == null) "بر اساس 100 گرم" else "${grams.toInt()} گرم", color = Color.LightGray, fontSize = 11.sp, modifier = Modifier.padding(bottom = 8.dp))
+                    Text(if(selected == null) "بر اساس 100 گرم" else "${grams.toInt()} گرم", color = Muted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 8.dp))
                 }
-                HorizontalDivider(color = Color.White.copy(alpha = .16f))
+                HorizontalDivider(color = MFitPalette.Stroke)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    NutrientValue("پروتئین", protein, Color.White)
-                    NutrientValue("کربوهیدرات", carbs, Color.White)
-                    NutrientValue("چربی", fat, Color.White)
+                    NutrientValue("پروتئین", protein, Ink)
+                    NutrientValue("کربوهیدرات", carbs, Ink)
+                    NutrientValue("چربی", fat, Ink)
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    NutrientValue("قند", sugar, Color.White)
-                    NutrientValue("فیبر", fiber, Color.White)
+                    NutrientValue("قند", sugar, Ink)
+                    NutrientValue("فیبر", fiber, Ink)
                 }
             }
         }
