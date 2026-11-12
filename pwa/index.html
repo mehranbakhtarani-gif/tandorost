@@ -953,29 +953,49 @@ body{background:var(--bg)!important;color:var(--ink)!important;font-family:Tahom
 @media(prefers-reduced-motion:reduce){#appRoot *,#nav *{animation:none!important;transition:none!important}}
 
 
-/* Mobile scroll fix: allow every tab to scroll vertically without the dock covering its last controls */
-html,body{
+/* Mobile scrolling: keep the document (html viewport) as the only vertical scroller.
+   Do not make both html and body independent overflow containers on Android WebView/PWA. */
+html{
   height:auto!important;
   min-height:100%!important;
   overflow-x:hidden!important;
   overflow-y:auto!important;
-  overscroll-behavior-y:contain;
+  scroll-behavior:auto;
   -webkit-overflow-scrolling:touch;
 }
-#appRoot.app,#appRoot.app.home-mode{
+body{
+  position:relative!important;
+  display:flow-root;
+  width:100%;
   height:auto!important;
+  min-height:100vh!important;
+  min-height:100dvh!important;
+  overflow:visible!important;
+  overscroll-behavior-y:auto!important;
+  background-attachment:scroll!important;
+  touch-action:pan-y pinch-zoom;
+}
+#appRoot.app,#appRoot.app.home-mode{
+  display:flow-root;
+  width:100%;
+  height:auto!important;
+  min-height:100dvh!important;
   max-height:none!important;
-  overflow-x:hidden!important;
-  overflow-y:visible!important;
+  overflow:visible!important;
+  contain:none!important;
+  transform:none;
 }
 #appRoot>section.tab,
 #appRoot>section.tab.active{
+  display:block;
   height:auto!important;
+  min-height:0!important;
   max-height:none!important;
   overflow:visible!important;
   touch-action:pan-y;
   padding-bottom:calc(132px + env(safe-area-inset-bottom))!important;
 }
+#appRoot>section.tab:not(.active){display:none!important}
 #nav.bottomnav{touch-action:pan-x;pointer-events:auto}
 
 </style></head>
