@@ -20,13 +20,25 @@ class TrackingService : Service(), LocationListener {
     private var lastAcceptedAt = 0L
     override fun onCreate() {
         super.onCreate()
-        startedAt = System.currentTimeMillis()
-        lastAcceptedAt = startedAt
-        distance = 0f
+        val prefs = getSharedPreferences("mfit_native", MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        startedAt = prefs.getLong("session_started_at", now).takeIf { it > 0L } ?: now
+        lastAcceptedAt = now
+        distance = prefs.getFloat("live_distance", 0f)
         last = null
         val channel = "mfit_activity"
         if (Build.VERSION.SDK_INT >= 26) getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(channel, "ثبت فعالیت", NotificationManager.IMPORTANCE_LOW))
-        val notification = Notification.Builder(this, channel).setContentTitle("MFit • فعالیت در حال ثبت").setContentText("GPS روشن است").setSmallIcon(android.R.drawable.ic_menu_mylocation).build()
+        val stopIntent = PendingIntent.getService(
+            this, 7, Intent(this, TrackingService::class.java).setAction("STOP"),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = Notification.Builder(this, channel)
+            .setContentTitle("MFit • فعالیت در حال ثبت")
+            .setContentText("ثبت GPS در پس‌زمینه فعال است")
+            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+            .setOngoing(true)
+            .addAction(android.R.drawable.ic_media_pause, "پایان فعالیت", stopIntent)
+            .build()
         startForeground(7, notification)
         manager = getSystemService(LOCATION_SERVICE) as LocationManager
         try { manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 3000L, 2f, this) } catch (_: SecurityException) {}
@@ -49,7 +61,6 @@ class TrackingService : Service(), LocationListener {
             last = location
             lastAcceptedAt = now
         }
-        val prefs = getSharedPreferences("mfit_native", MODE_PRIVATE)
         val route = try { JSONArray(prefs.getString("route_points", "[]")) } catch (_: Exception) { JSONArray() }
         if (accepted) {
             route.put(JSONArray().put(location.latitude).put(location.longitude))
