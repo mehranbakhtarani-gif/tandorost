@@ -42,16 +42,16 @@ internal fun Modifier.glassSurface(
     .background(
         Brush.linearGradient(
             listOf(
-                tint.copy(alpha = .68f),
-                Color.White.copy(alpha = .48f),
-                tint.copy(alpha = .34f)
+                tint.copy(alpha = .52f),
+                Color.White.copy(alpha = .34f),
+                tint.copy(alpha = .22f)
             )
         )
     )
     .border(
         1.dp,
         Brush.linearGradient(
-            listOf(Color.White.copy(alpha = .92f), Color.White.copy(alpha = .24f))
+            listOf(Color.White.copy(alpha = .86f), Color.White.copy(alpha = .18f))
         ),
         shape
     )
