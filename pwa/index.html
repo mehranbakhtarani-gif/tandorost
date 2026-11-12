@@ -564,6 +564,100 @@ body{background:#f2f7f7!important;color:#18343f!important}
 @media(max-width:380px){#appRoot.app{padding-left:13px;padding-right:13px}#appRoot .step-card{grid-template-columns:minmax(0,1fr) 112px;padding:15px!important}#appRoot .step-card .mini-ring{width:106px;height:106px}#appRoot .quick-grid{gap:2px}#appRoot .quick-icon{width:37px;height:37px}}
 @media(prefers-reduced-motion:reduce){#appRoot .tab.active{animation:none}}
 
+
+/* TANDOROST 3.1 — readable color system, per-tab atmospheres, true translucent glass */
+/* Global canvas: calm, bright enough for legible type */
+html,body{background:#eaf0f2!important}
+body{color:#193440!important}
+#appRoot.app,#appRoot.app.home-mode{background:transparent!important;color:#193440!important;box-shadow:none!important}
+#appRoot>header{color:#193440!important;border-bottom-color:rgba(39,83,99,.14)!important}
+#appRoot>header .brand h1{color:#173744!important}
+#appRoot>header .brand small{color:#607d88!important}
+#appRoot .welcome h2{color:#173744!important}
+#appRoot .welcome p,#appRoot .welcome small{color:#587681!important}
+#appRoot .sectionhead h2{color:#173744!important}
+#appRoot .sectionhead .pill{color:#587681!important}
+/* Each destination has its own visual atmosphere */
+#appRoot>.tab{position:relative;isolation:isolate;min-height:calc(100dvh - 118px);padding:12px 10px 26px;border-radius:30px;overflow:visible}
+#appRoot>#home{background:
+ radial-gradient(ellipse at 8% 4%,rgba(103,213,174,.42),transparent 37%),
+ radial-gradient(ellipse at 94% 25%,rgba(111,190,218,.34),transparent 38%),
+ radial-gradient(ellipse at 50% 78%,rgba(193,224,215,.38),transparent 48%),
+ linear-gradient(145deg,#eaf7f1 0%,#eaf2f6 52%,#e7f1f1 100%)!important}
+#appRoot>#walk{background:
+ radial-gradient(ellipse at 85% 4%,rgba(88,188,216,.42),transparent 40%),
+ radial-gradient(ellipse at 0% 42%,rgba(102,199,184,.34),transparent 43%),
+ repeating-linear-gradient(155deg,rgba(70,139,157,.045) 0 1px,transparent 1px 19px),
+ linear-gradient(145deg,#e6f3f6,#e8f4f1 58%,#e5edf5)!important}
+#appRoot>#food{background:
+ radial-gradient(ellipse at 92% 8%,rgba(255,190,133,.42),transparent 40%),
+ radial-gradient(ellipse at 8% 45%,rgba(226,199,140,.3),transparent 42%),
+ linear-gradient(145deg,#fff3e8,#f8eee4 52%,#f5eee5)!important}
+#appRoot>#routine{background:
+ radial-gradient(ellipse at 90% 6%,rgba(96,206,220,.42),transparent 40%),
+ radial-gradient(ellipse at 8% 50%,rgba(115,208,176,.32),transparent 45%),
+ linear-gradient(145deg,#e6f7f7,#e8f5f0 56%,#e7f1f5)!important}
+#appRoot>#exercise{background:
+ radial-gradient(ellipse at 90% 5%,rgba(164,153,235,.36),transparent 40%),
+ radial-gradient(ellipse at 5% 52%,rgba(112,177,223,.32),transparent 45%),
+ linear-gradient(145deg,#eeedfb,#e9f0fa 55%,#e8f1f4)!important}
+#appRoot>#progress{background:
+ radial-gradient(ellipse at 92% 6%,rgba(139,157,231,.4),transparent 42%),
+ radial-gradient(ellipse at 5% 45%,rgba(111,192,203,.32),transparent 44%),
+ linear-gradient(145deg,#ebeffb,#e8f1f6 56%,#e8f2f1)!important}
+#appRoot>#profile{background:
+ radial-gradient(ellipse at 90% 4%,rgba(101,185,204,.38),transparent 42%),
+ radial-gradient(ellipse at 6% 50%,rgba(115,190,169,.3),transparent 46%),
+ linear-gradient(145deg,#e8f3f6,#e9f4f0 58%,#e9eff4)!important}
+/* Real glass: enough transparency to reveal the tab's color and light beneath */
+#appRoot .card,#appRoot .stat,#appRoot .dash-card,#appRoot .weekly-card,#appRoot .task-card,
+#appRoot .profile-menu-item,#appRoot .activity-mode,#appRoot .profile-panel{
+ background:rgba(255,255,255,.36)!important;
+ border:1px solid rgba(255,255,255,.68)!important;
+ box-shadow:0 12px 32px rgba(35,75,91,.09),inset 0 1px 0 rgba(255,255,255,.82)!important;
+ backdrop-filter:blur(25px) saturate(165%)!important;
+ -webkit-backdrop-filter:blur(25px) saturate(165%)!important;
+}
+#appRoot .step-card{background:linear-gradient(125deg,rgba(18,91,83,.84),rgba(22,120,99,.76))!important;border:1px solid rgba(255,255,255,.34)!important;backdrop-filter:blur(26px) saturate(155%)!important;-webkit-backdrop-filter:blur(26px) saturate(155%)!important}
+#appRoot .water-card{background:rgba(226,248,249,.42)!important;border:1px solid rgba(255,255,255,.75)!important}
+#appRoot .second-grid .dash-card{background:rgba(255,255,255,.4)!important}
+#appRoot .weekly-card,#appRoot .task-card{background:rgba(255,255,255,.38)!important}
+#appRoot .tab:not(#home)>.card:not(:first-child){background:rgba(255,255,255,.22)!important;border:1px solid rgba(255,255,255,.42)!important;border-radius:22px!important;box-shadow:0 8px 25px rgba(35,75,91,.06)!important;backdrop-filter:blur(20px) saturate(150%)!important;-webkit-backdrop-filter:blur(20px) saturate(150%)!important}
+#appRoot .tab:not(#home)>.card:first-child{background:rgba(255,255,255,.42)!important;border:1px solid rgba(255,255,255,.76)!important;box-shadow:0 12px 32px rgba(35,75,91,.09),inset 0 1px 0 rgba(255,255,255,.9)!important;backdrop-filter:blur(28px) saturate(165%)!important;-webkit-backdrop-filter:blur(28px) saturate(165%)!important}
+#appRoot .tab h2,#appRoot .tab h3,#appRoot .tab b,#appRoot .tab strong,#appRoot .tab label{color:#193b48!important}
+#appRoot .tab p,#appRoot .tab small,#appRoot .tab .sub,#appRoot .tab .muted{color:#526f7b!important}
+#appRoot .tab .pill,#appRoot .tab .badge{background:rgba(255,255,255,.48)!important;color:#315a68!important;border:1px solid rgba(255,255,255,.58)!important}
+#appRoot .tab .input{background:rgba(255,255,255,.46)!important;border:1px solid rgba(255,255,255,.8)!important;color:#173b49!important;box-shadow:inset 0 1px 3px rgba(42,82,96,.04)!important}
+#appRoot .tab .input::placeholder{color:#8197a0!important}
+#appRoot .tab .activity-mode{background:rgba(255,255,255,.4)!important;color:#244b59!important}
+#appRoot .tab .activity-mode.active{background:rgba(204,245,226,.68)!important;border-color:rgba(56,174,130,.45)!important}
+#appRoot .tab .triple>div{background:rgba(255,255,255,.38)!important;border:1px solid rgba(255,255,255,.65)!important;backdrop-filter:blur(14px)!important;-webkit-backdrop-filter:blur(14px)!important}
+#appRoot .tab .triple b{color:#1e4654!important}
+#appRoot .tab .triple small{color:#5d7a85!important}
+#appRoot .tab .notice{background:rgba(255,248,231,.55)!important;color:#735e3f!important;border:1px solid rgba(255,255,255,.65)!important;backdrop-filter:blur(14px)!important;-webkit-backdrop-filter:blur(14px)!important}
+#appRoot .tab .listitem,#appRoot .tab .todo{border-color:rgba(68,111,125,.16)!important}
+#appRoot .tab .todo-text,#appRoot .tab .listitem b{color:#294c59!important}
+#appRoot .tab .clock{color:#173f4d!important;text-shadow:0 1px 0 rgba(255,255,255,.55)}
+#appRoot .tab .map-shell{position:relative;isolation:isolate;border-radius:25px!important;border:1px solid rgba(255,255,255,.8)!important;overflow:hidden;box-shadow:0 15px 36px rgba(34,81,98,.14),inset 0 1px 0 rgba(255,255,255,.9)!important;background:rgba(255,255,255,.22)!important}
+#appRoot .tab .real-map{background:rgba(190,220,220,.22)!important}
+#appRoot .tab .leaflet-container{background:#dcebed!important}
+#appRoot .tab .exercise{background:rgba(255,255,255,.24)!important;border-bottom-color:rgba(70,112,128,.14)!important;backdrop-filter:blur(14px)!important}
+#appRoot .profile-hero{background:linear-gradient(125deg,rgba(21,76,91,.88),rgba(24,126,104,.78))!important;border:1px solid rgba(255,255,255,.42)!important;backdrop-filter:blur(25px) saturate(155%)!important;-webkit-backdrop-filter:blur(25px) saturate(155%)!important}
+#appRoot .profile-hero h2,#appRoot .profile-hero .sub{color:#f5fffc!important}
+#appRoot .profile-menu-item{background:rgba(255,255,255,.35)!important}
+#appRoot .profile-menu-item b{color:#244754!important}
+#appRoot .profile-menu-item small{color:#607d87!important}
+#appRoot .profile-menu-item.active{background:rgba(208,244,229,.56)!important}
+#nav.bottomnav{background:rgba(245,252,252,.54)!important;border:1px solid rgba(255,255,255,.82)!important;box-shadow:0 14px 38px rgba(36,77,91,.16),inset 0 1px 0 rgba(255,255,255,.9)!important;backdrop-filter:blur(30px) saturate(180%)!important;-webkit-backdrop-filter:blur(30px) saturate(180%)!important}
+#nav button{color:#597580!important}
+#nav button.active{background:rgba(197,241,221,.62)!important;color:#087d5e!important}
+#nav button.active .nav-icon{color:#087d5e!important}
+#appRoot .tab .btn{color:#fff!important}
+#appRoot .tab .btn.secondary,#appRoot .tab .btn.outline{background:rgba(255,255,255,.48)!important;color:#315866!important;border:1px solid rgba(255,255,255,.8)!important;backdrop-filter:blur(15px)!important}
+@media(prefers-reduced-transparency:reduce){
+ #appRoot .card,#appRoot .stat,#appRoot .dash-card,#appRoot .weekly-card,#appRoot .task-card,#appRoot .profile-menu-item,#appRoot .activity-mode,#appRoot .tab:not(#home)>.card{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(255,255,255,.94)!important}
+}
+
 </style></head>
 <body><main class="app home-mode" id="appRoot">
 <header><div class="brand"><small id="today"></small><h1>تندرست</h1><small>قدم‌های کوچک، حال بهتر 🌱</small></div><div class="header-actions"><button class="install-btn" id="installBtn" hidden>نصب اپ</button><button class="iconbtn" id="themeBtn" aria-label="تغییر پوسته">☾</button></div></header>
