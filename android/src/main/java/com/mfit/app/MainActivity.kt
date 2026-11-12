@@ -57,7 +57,7 @@ class MainActivity : ComponentActivity() {
         lastActivity = prefs.getString("last_activity", "—") ?: "—"
         imported = prefs.getBoolean("legacy_imported", false)
         val filter = IntentFilter("com.mfit.app.TRACK_UPDATE")
-        if (Build.VERSION.SDK_INT >= 33) registerReceiver(receiver, filter, RECEIVER_NOT_EXPORTED) else @Suppress("DEPRECATION") registerReceiver(receiver, filter)
+        if (Build.VERSION.SDK_INT >= 33) { registerReceiver(receiver, filter, RECEIVER_NOT_EXPORTED) } else { registerReceiver(receiver, filter) }
         setContent { MFitApp(tracking, liveDistance, liveSeconds, lastActivity, imported,
             onStart = { requestTracking() }, onStop = { stopTracking() },
             onImport = { importLauncher.launch(arrayOf("application/json", "text/*")) }) }
