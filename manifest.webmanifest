@@ -1,0 +1,19 @@
+{
+  "id": "/tandorost/",
+  "name": "تندرست | همراه سلامتی",
+  "short_name": "تندرست",
+  "description": "داشبورد روزانه فعالیت، تغذیه، آب و عادت‌ها",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#071c31",
+  "theme_color": "#071c31",
+  "categories": ["health", "fitness", "lifestyle"],
+  "icons": [
+    {"src":"icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}
