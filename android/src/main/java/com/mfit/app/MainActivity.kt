@@ -37,6 +37,7 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
@@ -51,6 +52,7 @@ class MainActivity : ComponentActivity() {
     private var tracking by mutableStateOf(false)
     private var liveDistance by mutableFloatStateOf(0f)
     private var liveSeconds by mutableLongStateOf(0L)
+    private var sessionStartedAt by mutableLongStateOf(0L)
     private var routePoints by mutableStateOf<List<Pair<Double, Double>>>(emptyList())
     private var activityHistory by mutableStateOf<List<String>>(emptyList())
     private var lastActivity by mutableStateOf("—")
@@ -83,7 +85,7 @@ class MainActivity : ComponentActivity() {
             ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val filter = IntentFilter("com.mfit.app.TRACK_UPDATE")
         if (Build.VERSION.SDK_INT >= 33) { registerReceiver(receiver, filter, RECEIVER_NOT_EXPORTED) } else { registerReceiver(receiver, filter) }
-        setContent { MFitApp(tracking, liveDistance, liveSeconds, lastActivity, imported, routePoints, activityHistory, 
+        setContent { MFitApp(tracking, liveDistance, liveSeconds, sessionStartedAt, lastActivity, imported, routePoints, activityHistory, 
             onStart = { requestTracking() }, onStop = { stopTracking() },
             onImport = { importLauncher.launch(arrayOf("application/json", "text/*")) },
             weatherPermissionGranted = weatherPermissionGranted,
@@ -92,6 +94,7 @@ class MainActivity : ComponentActivity() {
     private fun refreshTrack() {
         liveDistance = prefs.getFloat("live_distance", 0f)
         liveSeconds = prefs.getLong("live_seconds", 0L)
+        sessionStartedAt = prefs.getLong("session_started_at", 0L)
         routePoints = try { val a = JSONArray(prefs.getString("route_points", "[]")); (0 until a.length()).mapNotNull { i -> val p = a.optJSONArray(i); if (p != null && p.length() >= 2) p.getDouble(0) to p.getDouble(1) else null } } catch (_: Exception) { emptyList() }
         tracking = prefs.getBoolean("tracking_active", false)
         activityHistory = try { val a = JSONArray(prefs.getString("activity_history", "[]")); (0 until a.length()).mapNotNull { i -> a.optString(i).takeIf { it.isNotBlank() } } } catch (_: Exception) { emptyList() }
@@ -103,7 +106,7 @@ class MainActivity : ComponentActivity() {
         val missing = permissions.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
         if (missing.isEmpty()) startTracking() else permissionLauncher.launch(missing.toTypedArray())
     }
-    private fun startTracking() { prefs.edit().putFloat("live_distance", 0f).putLong("live_seconds", 0L).putLong("session_started_at", System.currentTimeMillis()).putString("route_points", "[]").putBoolean("tracking_active", true).apply(); refreshTrack(); ContextCompat.startForegroundService(this, Intent(this, TrackingService::class.java)); tracking = true }
+    private fun startTracking() { val started = System.currentTimeMillis(); prefs.edit().putFloat("live_distance", 0f).putLong("live_seconds", 0L).putLong("session_started_at", started).putString("route_points", "[]").putBoolean("tracking_active", true).apply(); refreshTrack(); ContextCompat.startForegroundService(this, Intent(this, TrackingService::class.java)); tracking = true }
     private fun stopTracking() { stopService(Intent(this, TrackingService::class.java)); tracking = false; prefs.edit().putBoolean("tracking_active", false).apply(); refreshTrack() }
     override fun onDestroy() { unregisterReceiver(receiver); super.onDestroy() }
 }
@@ -238,10 +241,20 @@ private data class DailyWellnessSnapshot(
 private enum class Tab(val label: String) { HOME("خانه"), ACTIVITY("فعالیت"), FOOD("تغذیه"), ROUTINE("روتین"), PROFILE("پروفایل") }
 
 @Composable
-private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActivity: String, imported: Boolean, routePoints: List<Pair<Double, Double>>, activityHistory: List<String>,
+private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionStartedAt: Long, lastActivity: String, imported: Boolean, routePoints: List<Pair<Double, Double>>, activityHistory: List<String>,
                     onStart: () -> Unit, onStop: () -> Unit, onImport: () -> Unit,
                     weatherPermissionGranted: Boolean, onWeatherPermission: () -> Unit) {
     var tab by remember { mutableStateOf(Tab.HOME) }
+    var displaySeconds by remember { mutableLongStateOf(seconds) }
+    LaunchedEffect(tracking, sessionStartedAt) {
+        if (tracking && sessionStartedAt > 0L) {
+            while (true) {
+                displaySeconds = ((System.currentTimeMillis() - sessionStartedAt) / 1000L).coerceAtLeast(0L)
+                delay(250L)
+            }
+        } else displaySeconds = seconds
+    }
+    val shownSeconds = if (tracking) displaySeconds else seconds
     var water by remember { mutableIntStateOf(0) }
     var meal by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("100") }
@@ -348,7 +361,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                     when(page) {
                     Tab.HOME -> {
                         WeatherPanel(weatherPermissionGranted, onWeatherPermission)
-                        HomeHero(tracking, distance, seconds, onStart = { tab = Tab.ACTIVITY; onStart() })
+                        HomeHero(tracking, distance, shownSeconds, onStart = { tab = Tab.ACTIVITY; onStart() })
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             DashboardStat("آب امروز", water.toString(), "لیوان", Icons.Default.WaterDrop, Modifier.weight(1f))
                             DashboardStat("آخرین فعالیت", if(lastActivity == "—") "—" else lastActivity, "کیلومتر", Icons.Default.DirectionsRun, Modifier.weight(1f))
@@ -410,7 +423,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                         }
                     }
                     Tab.ACTIVITY -> {
-                        ActivityPanel(tracking, distance, seconds, routePoints, activityHistory, onStart, onStop)
+                        ActivityPanel(tracking, distance, shownSeconds, routePoints, activityHistory, onStart, onStop)
                         SectionTitle("آخرین رکورد", "فعالیت ذخیره‌شده")
                         DashboardStat("مسافت آخرین فعالیت", lastActivity, "کیلومتر", Icons.Default.Route, Modifier.fillMaxWidth())
                     }
@@ -700,7 +713,16 @@ private fun DashboardMini(title: String, value: String, unit: String, icon: andr
     }
 }
 
-@Composable private fun ActivityPanel(tracking: Boolean, distance: Float, seconds: Long, routePoints: List<Pair<Double, Double>>, activityHistory: List<String>, onStart: () -> Unit, onStop: () -> Unit) {
+@Composable
+private fun ActivityPanel(
+    tracking: Boolean,
+    distance: Float,
+    seconds: Long,
+    routePoints: List<Pair<Double, Double>>,
+    activityHistory: List<String>,
+    onStart: () -> Unit,
+    onStop: () -> Unit
+) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val mapView = remember {
         Configuration.getInstance().userAgentValue = context.packageName
@@ -712,32 +734,67 @@ private fun DashboardMini(title: String, value: String, unit: String, icon: andr
             onResume()
         }
     }
-    DisposableEffect(mapView) { onDispose { mapView.onPause(); mapView.onDetach() } }
-    Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+    val routeLine = remember(mapView) {
+        Polyline().apply {
+            outlinePaint.color = android.graphics.Color.rgb(155, 190, 0)
+            outlinePaint.strokeWidth = 11f
+        }
+    }
+    val currentMarker = remember(mapView) {
+        Marker(mapView).apply {
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+            title = "موقعیت فعلی"
+        }
+    }
+    var hasCenteredOnRoute by remember(mapView) { mutableStateOf(false) }
+
+    DisposableEffect(mapView) {
+        onDispose {
+            mapView.onPause()
+            mapView.onDetach()
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(24.dp)),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    ) {
         Column {
-            AndroidView(factory = { mapView }, modifier = Modifier.fillMaxWidth().height(260.dp), update = { map ->
-                map.overlays.removeAll { it is Polyline || it is Marker }
-                if (routePoints.isNotEmpty()) {
-                    val geo = routePoints.map { GeoPoint(it.first, it.second) }
-                    val line = Polyline().apply {
-                        setPoints(geo)
-                        outlinePaint.color = android.graphics.Color.rgb(155, 190, 0)
-                        outlinePaint.strokeWidth = 11f
+            AndroidView(
+                factory = { mapView },
+                modifier = Modifier.fillMaxWidth().height(260.dp),
+                update = { map ->
+                    if (routePoints.isNotEmpty()) {
+                        val geo = routePoints.map { GeoPoint(it.first, it.second) }
+                        routeLine.setPoints(geo)
+                        if (routeLine !in map.overlays) map.overlays.add(routeLine)
+                        currentMarker.position = geo.last()
+                        currentMarker.title = if (tracking) "موقعیت فعلی" else "پایان مسیر"
+                        if (currentMarker !in map.overlays) map.overlays.add(currentMarker)
+
+                        if (!hasCenteredOnRoute) {
+                            map.controller.setZoom(16.0)
+                            map.controller.setCenter(geo.last())
+                            hasCenteredOnRoute = true
+                        } else if (tracking) {
+                            // Animate rather than hard-jumping the camera on each GPS fix.
+                            map.controller.animateTo(geo.last())
+                        }
+                    } else {
+                        map.overlays.remove(routeLine)
+                        map.overlays.remove(currentMarker)
+                        hasCenteredOnRoute = false
                     }
-                    map.overlays.add(line)
-                    val pin = Marker(map).apply {
-                        position = geo.last()
-                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                        title = if (tracking) "موقعیت فعلی" else "پایان مسیر"
-                    }
-                    map.overlays.add(pin)
-                    map.controller.setCenter(geo.last())
-                    if (map.zoomLevelDouble < 14.0) map.controller.setZoom(16.0)
+                    map.invalidate()
                 }
-                map.invalidate()
-            })
-            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(if (routePoints.isEmpty()) "نقشه آماده ثبت مسیر" else "${routePoints.size} نقطه ثبت‌شده", fontSize = 12.sp, color = Muted)
+            )
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(if (routePoints.isEmpty()) "منتظر اولین موقعیت GPS…" else "${routePoints.size} نقطه ثبت‌شده", fontSize = 12.sp, color = Muted)
                 Text("© OpenStreetMap contributors", fontSize = 10.sp, color = Muted)
             }
         }
@@ -756,8 +813,11 @@ private fun DashboardMini(title: String, value: String, unit: String, icon: andr
     if (activityHistory.isNotEmpty()) {
         SectionTitle("سابقه فعالیت‌ها", "آخرین فعالیت‌های ثبت‌شده با GPS")
         activityHistory.take(7).forEach { item ->
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White).padding(13.dp),
-                horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(14.dp)).padding(13.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(item.substringBefore("|"), fontSize = 12.sp, color = Ink, fontWeight = FontWeight.SemiBold)
                 Text(item.substringAfter("|", ""), fontSize = 11.sp, color = Muted)
             }
@@ -765,12 +825,15 @@ private fun DashboardMini(title: String, value: String, unit: String, icon: andr
     } else {
         Text("بعد از پایان اولین فعالیت، سابقه‌اش اینجا نمایش داده می‌شود.", color = Muted, fontSize = 11.sp)
     }
-    Button(onClick = if(tracking) onStop else onStart, modifier = Modifier.fillMaxWidth().height(58.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = if(tracking) Color(0xFFB3261E) else Lime, contentColor = Ink),
-        shape = RoundedCornerShape(18.dp)) {
-        Icon(if(tracking) Icons.Default.Stop else Icons.Default.PlayArrow, null)
+    Button(
+        onClick = if (tracking) onStop else onStart,
+        modifier = Modifier.fillMaxWidth().height(58.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = if (tracking) Color(0xFFB3261E) else Lime, contentColor = Ink),
+        shape = RoundedCornerShape(18.dp)
+    ) {
+        Icon(if (tracking) Icons.Default.Stop else Icons.Default.PlayArrow, null)
         Spacer(Modifier.width(8.dp))
-        Text(if(tracking) "پایان فعالیت" else "شروع ثبت فعالیت", fontWeight = FontWeight.Bold)
+        Text(if (tracking) "پایان فعالیت" else "شروع ثبت فعالیت", fontWeight = FontWeight.Bold)
     }
 }
 
