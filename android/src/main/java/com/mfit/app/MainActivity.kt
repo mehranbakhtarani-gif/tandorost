@@ -94,8 +94,8 @@ class MainActivity : ComponentActivity() {
 private enum class Tab(val label: String) { HOME("خانه"), ACTIVITY("فعالیت"), FOOD("تغذیه"), SLEEP("خواب"), PROFILE("پروفایل") }
 
 @Composable
-private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActivity: String, imported: Boolean, routePoints: List<Pair<Double, Double>>,
-                    onStart: () -> Unit, onStop: () -> Unit, onImport: () -> Unit, activityHistory: List<String>) {
+private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActivity: String, imported: Boolean, routePoints: List<Pair<Double, Double>>, activityHistory: List<String>,
+                    onStart: () -> Unit, onStop: () -> Unit, onImport: () -> Unit) {
     var tab by remember { mutableStateOf(Tab.HOME) }
     var water by remember { mutableIntStateOf(0) }
     var meal by remember { mutableStateOf("") }
