@@ -159,6 +159,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                     animationSpec = androidx.compose.animation.core.tween(durationMillis = 240),
                     label = "mfit-tab-transition"
                 ) { page ->
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                     when(page) {
                     Tab.HOME -> {
                         HomeHero(tracking, distance, seconds, onStart = { tab = Tab.ACTIVITY; onStart() })
@@ -241,6 +242,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                                 OutlinedButton(onClick = onImport) { Icon(Icons.Default.FileUpload, null); Spacer(Modifier.width(8.dp)); Text("وارد کردن فایل پشتیبان") }
                             }
                         }
+                    }
                     }
                     }
                 }
