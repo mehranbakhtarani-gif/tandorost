@@ -91,6 +91,11 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() { unregisterReceiver(receiver); super.onDestroy() }
 }
 
+private data class DailyWellnessSnapshot(
+    val date: String, val water: Int, val sleep: Float, val meals: Int,
+    val workoutCalories: Int, val habits: Int
+)
+
 private enum class Tab(val label: String) { HOME("خانه"), ACTIVITY("فعالیت"), FOOD("تغذیه"), ROUTINE("روتین"), PROFILE("پروفایل") }
 
 @Composable
@@ -107,6 +112,8 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
     var heightCm by remember { mutableStateOf("182") }
     var workoutLog by remember { mutableStateOf(listOf<String>()) }
     var habitsDone by remember { mutableStateOf(listOf(false, false, false, false)) }
+    var weeklySnapshots by remember { mutableStateOf(listOf<DailyWellnessSnapshot>()) }
+    var coachDataReady by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { context.getSharedPreferences("mfit_native", Context.MODE_PRIVATE) }
     val workoutCaloriesToday = workoutLog.sumOf { it.substringAfterLast("|", "0").toIntOrNull() ?: 0 }
@@ -134,6 +141,26 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
         val today = java.time.LocalDate.now().toString()
         if (prefs.getString("workout_log_date", "") != today) prefs.edit().putString("workout_log_date", today).putString("workout_log_today", "").apply()
         workoutLog = prefs.getString("workout_log_today", "")?.split("\n")?.filter { it.isNotBlank() } ?: emptyList()
+        val saved = try { JSONArray(prefs.getString("weekly_snapshots", "[]")) } catch (_: Exception) { JSONArray() }
+        weeklySnapshots = (0 until saved.length()).mapNotNull { i ->
+            saved.optJSONObject(i)?.let { o ->
+                DailyWellnessSnapshot(o.optString("date"), o.optInt("water"), o.optDouble("sleep", 0.0).toFloat(), o.optInt("meals"), o.optInt("workoutCalories"), o.optInt("habits"))
+            }
+        }.takeLast(7)
+        coachDataReady = true
+    }
+    LaunchedEffect(coachDataReady, water, sleep, mealLog, workoutLog, habitsDone) {
+        if (coachDataReady) {
+            val today = java.time.LocalDate.now().toString()
+            val snapshot = DailyWellnessSnapshot(today, water, sleep, mealLog.size, workoutCaloriesToday, habitsDone.count { it })
+            weeklySnapshots = (weeklySnapshots.filterNot { it.date == today } + snapshot).takeLast(7)
+            val json = JSONArray()
+            weeklySnapshots.forEach { item ->
+                json.put(JSONObject().put("date", item.date).put("water", item.water).put("sleep", item.sleep.toDouble())
+                    .put("meals", item.meals).put("workoutCalories", item.workoutCalories).put("habits", item.habits))
+            }
+            prefs.edit().putString("weekly_snapshots", json.toString()).apply()
+        }
     }
     MFitTheme {
         Scaffold(
@@ -183,6 +210,9 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                             sleepHours = sleep,
                             workoutCalories = workoutCaloriesToday,
                             habitsCompleted = habitsDone.count { it },
+                            weeklyDays = weeklySnapshots.size,
+                            weeklyWorkoutCalories = weeklySnapshots.sumOf { it.workoutCalories },
+                            weeklyAverageWater = if (weeklySnapshots.isEmpty()) 0 else weeklySnapshots.sumOf { it.water } / weeklySnapshots.size,
                             onFood = { tab = Tab.FOOD },
                             onRoutine = { tab = Tab.ROUTINE }
                         )
@@ -412,7 +442,7 @@ private fun HomeHero(tracking: Boolean, distance: Float, seconds: Long, onStart:
 @Composable
 private fun SmartCoachPanel(
     water: Int, mealCount: Int, sleepHours: Float, workoutCalories: Int,
-    habitsCompleted: Int, onFood: () -> Unit, onRoutine: () -> Unit
+    habitsCompleted: Int, weeklyDays: Int, weeklyWorkoutCalories: Int, weeklyAverageWater: Int, onFood: () -> Unit, onRoutine: () -> Unit
 ) {
     val recovery = ((sleepHours / 8f).coerceIn(0f, 1f) * 55f +
         (habitsCompleted / 4f) * 25f +
@@ -444,6 +474,16 @@ private fun SmartCoachPanel(
             Box(Modifier.fillMaxWidth(recovery / 100f).fillMaxHeight().clip(CircleShape).background(Lime))
         }
         Text(advice, color = Color.White, fontSize = 13.sp, lineHeight = 21.sp, fontWeight = FontWeight.Medium)
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(17.dp)).background(Color.White.copy(alpha = .10f)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("گزارش ثبت‌شده اخیر", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("$weeklyDays روز", color = Lime, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column { Text("کالری تمرین", color = Color(0xFFB8C9C0), fontSize = 9.sp); Text("$weeklyWorkoutCalories kcal", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                Column { Text("میانگین آب", color = Color(0xFFB8C9C0), fontSize = 9.sp); Text("$weeklyAverageWater لیوان/روز", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+            }
+        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
             OutlinedButton(onClick = onFood, modifier = Modifier.weight(1f), border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .35f)), colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
                 Icon(Icons.Default.Restaurant, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(5.dp)); Text("تحلیل تغذیه", fontSize = 11.sp)
