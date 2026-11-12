@@ -998,6 +998,151 @@ body{
 #appRoot>section.tab:not(.active){display:none!important}
 #nav.bottomnav{touch-action:pan-x;pointer-events:auto}
 
+
+
+/* TANDOROST — polished Liquid Glass pass (all tabs, cards and navigation) */
+:root{
+ --td-glass-text:#203b55;
+ --td-glass-muted:#5e7890;
+ --td-glass-edge:rgba(255,255,255,.82);
+ --td-glass-shadow:0 12px 30px rgba(49,91,139,.12),inset 0 1px 0 rgba(255,255,255,.88),inset 0 -1px 0 rgba(255,255,255,.28);
+}
+#appRoot .card,
+#appRoot .stat,
+#appRoot .dash-card,
+#appRoot .weekly-card,
+#appRoot .task-card,
+#appRoot .profile-menu-item,
+#appRoot .activity-mode,
+#appRoot .exercise,
+#appRoot .listitem,
+#appRoot .triple>div,
+#appRoot .activity-stats>div,
+#appRoot .notice,
+#appRoot .weather-chip{
+ background:linear-gradient(145deg,rgba(255,255,255,.82) 0%,rgba(239,247,255,.66) 48%,rgba(220,237,250,.52) 100%)!important;
+ color:var(--td-glass-text)!important;
+ border:1px solid var(--td-glass-edge)!important;
+ box-shadow:var(--td-glass-shadow)!important;
+ -webkit-backdrop-filter:blur(22px) saturate(175%);
+ backdrop-filter:blur(22px) saturate(175%);
+}
+#appRoot .card h2,
+#appRoot .card h3,
+#appRoot .dash-title,
+#appRoot .sectionhead h2,
+#appRoot .weekly-head b,
+#appRoot .listitem b,
+#appRoot .profile-menu-item b,
+#appRoot .activity-stats b,
+#appRoot .triple b,
+#appRoot .field label{
+ color:#203d5b!important;
+}
+#appRoot .card p,
+#appRoot .card small,
+#appRoot .sub,
+#appRoot .muted,
+#appRoot .stat small,
+#appRoot .stat em,
+#appRoot .weekly-head small,
+#appRoot .weekly-meta,
+#appRoot .profile-menu-item small,
+#appRoot .listitem small,
+#appRoot .empty,
+#appRoot .todo-text,
+#appRoot .mini-foot,
+#appRoot .water-unit,
+#appRoot .dash-card>small{
+ color:#607b94!important;
+}
+#appRoot .stat strong,
+#appRoot .large-number,
+#appRoot .value,
+#appRoot .mini-ring strong{
+ color:#193957!important;
+}
+#appRoot .step-card{
+ background:linear-gradient(135deg,rgba(49,119,224,.88),rgba(68,157,226,.72))!important;
+ border:1px solid rgba(255,255,255,.72)!important;
+ box-shadow:0 14px 32px rgba(43,105,190,.2),inset 0 1px 0 rgba(255,255,255,.55)!important;
+ color:#fff!important;
+ -webkit-backdrop-filter:blur(22px) saturate(180%);
+ backdrop-filter:blur(22px) saturate(180%);
+}
+#appRoot .step-card .dash-title,
+#appRoot .step-card .mini-foot,
+#appRoot .step-card .mini-foot b,
+#appRoot .step-card>small,
+#appRoot .step-card .mini-ring strong,
+#appRoot .step-card .mini-ring small{color:#fff!important}
+#appRoot .step-card .mini-ring .ring-track{stroke:rgba(255,255,255,.38)!important}
+#appRoot .step-card .mini-ring .ring-value{stroke:#fff!important}
+#appRoot .step-card .tiny-progress{background:rgba(255,255,255,.35)!important}
+#appRoot .step-card .tiny-progress i{background:#fff!important}
+#appRoot .water-card{
+ background:linear-gradient(145deg,rgba(255,255,255,.88),rgba(226,244,252,.68))!important;
+ color:#23445e!important;
+}
+#appRoot .water-card .dash-title,
+#appRoot .water-card .water-unit,
+#appRoot .water-card .mini-foot,
+#appRoot .water-card .mini-foot b{color:#416982!important}
+#appRoot .quick-grid button{
+ background:linear-gradient(145deg,rgba(255,255,255,.82),rgba(228,240,251,.64))!important;
+ color:#385875!important;
+ border:1px solid rgba(255,255,255,.88)!important;
+ box-shadow:0 8px 20px rgba(47,83,127,.1),inset 0 1px 0 #fff!important;
+ -webkit-backdrop-filter:blur(18px) saturate(165%);
+ backdrop-filter:blur(18px) saturate(165%);
+}
+#appRoot .input,#appRoot input,#appRoot select,#appRoot textarea{
+ background:rgba(255,255,255,.84)!important;
+ color:#203b55!important;
+ border:1px solid rgba(174,198,222,.7)!important;
+ box-shadow:inset 0 1px 3px rgba(46,79,116,.06)!important;
+}
+#appRoot .input::placeholder,#appRoot input::placeholder,#appRoot textarea::placeholder{color:#8297ad!important}
+#appRoot .btn.secondary,#appRoot .btn.outline,#appRoot .chip,#appRoot .pill,#appRoot .badge{
+ background:rgba(225,238,251,.78)!important;color:#315779!important;
+ border:1px solid rgba(255,255,255,.85)!important;
+}
+#nav.bottomnav{
+ background:linear-gradient(135deg,rgba(255,255,255,.78),rgba(228,241,252,.56))!important;
+ border:1px solid rgba(255,255,255,.9)!important;
+ box-shadow:0 15px 36px rgba(44,79,125,.2),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(255,255,255,.35)!important;
+ -webkit-backdrop-filter:blur(28px) saturate(190%)!important;
+ backdrop-filter:blur(28px) saturate(190%)!important;
+}
+#nav.bottomnav button{color:#607991!important}
+#nav.bottomnav button .nav-icon{
+ width:35px!important;height:33px!important;border-radius:12px!important;
+ display:grid!important;place-items:center!important;
+ color:#52728e!important;
+ background:linear-gradient(145deg,rgba(255,255,255,.88),rgba(209,229,247,.62))!important;
+ border:1px solid rgba(255,255,255,.95)!important;
+ box-shadow:0 5px 13px rgba(51,88,133,.13),inset 0 1px 0 #fff,inset 0 -1px 0 rgba(91,130,165,.12)!important;
+}
+#nav.bottomnav button .nav-icon svg{filter:drop-shadow(0 1px 1px rgba(255,255,255,.55))}
+#nav.bottomnav button.active{
+ background:rgba(75,139,231,.12)!important;color:#245fba!important;
+ border:1px solid rgba(79,139,221,.2)!important;
+}
+#nav.bottomnav button.active .nav-icon{
+ color:#fff!important;
+ background:linear-gradient(145deg,#73b7ff,#3478df)!important;
+ border-color:rgba(255,255,255,.9)!important;
+ box-shadow:0 6px 16px rgba(47,112,209,.28),inset 0 1px 0 rgba(255,255,255,.85)!important;
+}
+#nav.bottomnav button.active .nav-icon svg{filter:drop-shadow(0 1px 1px rgba(17,57,113,.35))}
+#appRoot .notice{color:#765b31!important;background:linear-gradient(145deg,rgba(255,249,231,.9),rgba(255,239,207,.68))!important;border-color:rgba(255,255,255,.9)!important}
+#appRoot .todo{border-color:rgba(112,145,175,.2)!important}
+#appRoot .todo-text{color:#405d79!important}
+#appRoot .sectionhead .pill{color:#627d96!important}
+@media(prefers-reduced-transparency:reduce){
+ #appRoot .card,#appRoot .stat,#appRoot .dash-card,#appRoot .weekly-card,#appRoot .task-card,#appRoot .profile-menu-item,#appRoot .activity-mode,#appRoot .exercise,#appRoot .listitem,#appRoot .triple>div,#appRoot .activity-stats>div,#appRoot .notice,#nav.bottomnav,#nav.bottomnav button .nav-icon{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(247,250,253,.97)!important}
+}
+
 </style></head>
 <body><main class="app home-mode" id="appRoot">
 <header><div class="brand"><small id="today"></small><h1>تندرست</h1><small>قدم‌های کوچک، حال بهتر 🌱</small></div><div class="header-actions"><button class="weather-chip" id="weatherHeader" type="button" aria-label="آب‌وهوا">🌤️ <span id="weatherHeaderText">آب‌وهوا</span></button><button class="install-btn" id="installBtn" hidden>نصب اپ</button><button class="iconbtn" id="themeBtn" aria-label="تغییر پوسته">☾</button></div></header>
