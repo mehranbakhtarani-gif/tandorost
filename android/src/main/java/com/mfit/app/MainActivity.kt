@@ -317,7 +317,12 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
     }
     MFitTheme {
         Scaffold(
-            containerColor = Paper,
+            modifier = Modifier.background(
+                androidx.compose.ui.graphics.Brush.linearGradient(
+                    listOf(Color(0xFFE5ECE8), Paper, Color(0xFFE8EDF2))
+                )
+            ),
+            containerColor = Color.Transparent,
             bottomBar = { MFitBottomBar(tab) { tab = it } }
         ) { padding ->
             Column(
@@ -407,8 +412,8 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                             TextButton(onClick = { tab = Tab.ACTIVITY }) { Text("مشاهده فعالیت", color = Ink) }
                         }
                         Box(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
-                                .background(Color(0xFFE8EDE4)).clickable { tab = Tab.ACTIVITY }.padding(18.dp)
+                            Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(22.dp), Color(0xFFE8EDE4))
+                                .clickable { tab = Tab.ACTIVITY }.padding(18.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                                 Box(Modifier.size(52.dp).clip(CircleShape).background(Lime), contentAlignment = Alignment.Center) {
@@ -902,7 +907,7 @@ private fun RoutinePanel(
         SectionTitle("تمرین‌های قابل ثبت", "بدون باشگاه و با وزن بدن")
         workouts.forEach { item ->
             val active = selected == item.first
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(17.dp)).background(if (active) Color(0xFFEAF2D4) else Color.White)
+            Row(Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(17.dp), if (active) Color(0xFFEAF2D4) else Color(0xFFF3F6F1))
                 .clickable { selected = item.first }.padding(14.dp), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(11.dp)) {
                 Box(Modifier.size(46.dp).clip(RoundedCornerShape(15.dp)).background(if (active) Lime else Color(0xFFF0F2EC)), contentAlignment = Alignment.Center) {
