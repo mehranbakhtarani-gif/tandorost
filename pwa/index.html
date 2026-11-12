@@ -180,7 +180,7 @@ function onMotionStep(e){
  else{const g=e.accelerationIncludingGravity;if(!g||g.x===null||g.y===null||g.z===null)return;const alpha=.82;stepGravity.x=alpha*stepGravity.x+(1-alpha)*g.x;stepGravity.y=alpha*stepGravity.y+(1-alpha)*g.y;stepGravity.z=alpha*stepGravity.z+(1-alpha)*g.z;x=g.x-stepGravity.x;y=g.y-stepGravity.y;z=g.z-stepGravity.z}
  const magnitude=Math.sqrt(x*x+y*y+z*z);stepSensorSamples++;
  if(magnitude<.62)stepArmed=true;
- if(stepArmed&&magnitude>1.35){const now=Date.now();if(now-lastStepAt>300&&now-lastStepAt<1300||lastStepAt===0){walk.steps++;lastStepAt=now;stepArmed=false;walkRender();if(stepSensorSamples%8===0){D=day();$('stepHelp').textContent='شتاب‌سنج فعال • قدم‌ها در حال شمارش هستند'}}}
+ if(stepArmed&&magnitude>1.35){const now=Date.now();if(now-lastStepAt>300){walk.steps++;lastStepAt=now;stepArmed=false;walkRender();if(stepSensorSamples%8===0){D=day();$('stepHelp').textContent='شتاب‌سنج فعال • قدم‌ها در حال شمارش هستند'}}}
 }
 async function startStepSensor(){
  if(stepSensorOn)return true;
