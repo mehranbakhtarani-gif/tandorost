@@ -118,7 +118,8 @@ class TrackingService : Service(), LocationListener {
         val p = getSharedPreferences("mfit_native", MODE_PRIVATE)
         val meters = p.getFloat("live_distance", 0f)
         val seconds = ((System.currentTimeMillis() - startedAt) / 1000L).coerceAtLeast(p.getLong("live_seconds", 0L))
-        if (meters > 0f) {
+        // Save timer-only sessions too when GPS is unavailable or the workout is stationary.
+        if (meters > 0f || seconds > 0L) {
             val date = SimpleDateFormat("yyyy/MM/dd  HH:mm", Locale.getDefault()).format(Date())
             val history = try { JSONArray(p.getString("activity_history", "[]")) } catch (_: Exception) { JSONArray() }
             val entry = "$date|%.2f km • %02d:%02d".format(Locale.US, meters / 1000f, seconds / 60, seconds % 60)
