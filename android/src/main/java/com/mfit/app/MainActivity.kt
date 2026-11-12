@@ -270,6 +270,12 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
     var coachDataReady by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { context.getSharedPreferences("mfit_native", Context.MODE_PRIVATE) }
+    // One state/persistence path is shared by Home and Routine water controls.
+    val setWaterCount: (Int) -> Unit = { next ->
+        val safeCount = next.coerceAtLeast(0)
+        water = safeCount
+        prefs.edit().putInt("water_today", safeCount).apply()
+    }
     val workoutCaloriesToday = workoutLog.sumOf { it.substringAfterLast("|", "0").toIntOrNull() ?: 0 }
     LaunchedEffect(activityHistory.firstOrNull()) {
         val today = java.time.LocalDate.now().toString()
@@ -410,7 +416,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                         DashboardStat("کالری سوزانده‌شده با تمرین امروز", workoutCaloriesToday.toString(), "کیلوکالری", Icons.Default.LocalFireDepartment, Modifier.fillMaxWidth())
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Button(
-                                onClick = { water++; prefs.edit().putInt("water_today", water).apply() },
+                                onClick = { setWaterCount(water + 1) },
                                 modifier = Modifier.weight(1f).height(54.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = RoundedCornerShape(18.dp)
                             ) { Icon(Icons.Default.WaterDrop, null); Spacer(Modifier.width(7.dp)); Text("ثبت آب") }
@@ -453,7 +459,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                         RoutinePanel(sleep, { sleep = it; prefs.edit().putFloat("sleep_hours", it).apply() },
                             weight.replace(",", ".").toDoubleOrNull()?.coerceIn(30.0, 250.0) ?: 70.0,
                             workoutLog, { record -> workoutLog = workoutLog + record; prefs.edit().putString("workout_log_today", workoutLog.joinToString("\n")).apply() },
-                            water, { next -> water = next.coerceAtLeast(0); prefs.edit().putInt("water_today", water).apply() },
+                            water, setWaterCount,
                             habitsDone, { index, checked -> habitsDone = habitsDone.toMutableList().also { it[index] = checked }; prefs.edit().putString("habits_done_today", habitsDone.joinToString("") { if (it) "1" else "0" }).apply() })
                     }
                     Tab.PROFILE -> {
