@@ -103,6 +103,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
     var mealLog by remember { mutableStateOf(listOf<String>()) }
     var sleep by remember { mutableFloatStateOf(8f) }
     var weight by remember { mutableStateOf("96") }
+    var waist by remember { mutableStateOf("106") }
     var workoutLog by remember { mutableStateOf(listOf<String>()) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { context.getSharedPreferences("mfit_native", Context.MODE_PRIVATE) }
@@ -120,6 +121,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
         if (prefs.getString("meal_log_date", "") != dayKey) { prefs.edit().putString("meals_today", "").putString("meal_log_date", dayKey).apply() }
         mealLog = prefs.getString("meals_today", "")?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
         weight = prefs.getString("weight", "96") ?: "96"
+        waist = prefs.getString("waist_cm", "106") ?: "106"
         sleep = prefs.getFloat("sleep_hours", 8f)
         val today = java.time.LocalDate.now().toString()
         if (prefs.getString("workout_log_date", "") != today) prefs.edit().putString("workout_log_date", today).putString("workout_log_today", "").apply()
@@ -229,10 +231,16 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                         SectionTitle("پروفایل", "اطلاعات شخصی و داده‌ها")
                         Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Color.White).padding(18.dp)) {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Text("وزن فعلی", fontSize = 14.sp, color = Muted)
-                                OutlinedTextField(value = weight, onValueChange = { weight = it }, label = { Text("کیلوگرم") }, modifier = Modifier.fillMaxWidth())
-                                Button(onClick = { prefs.edit().putString("weight", weight).apply() }, modifier = Modifier.fillMaxWidth(),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = RoundedCornerShape(16.dp)) { Text("ذخیره تغییرات") }
+                                Text("اندازه‌های بدن", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Ink)
+                                OutlinedTextField(value = weight, onValueChange = { weight = it.filter { ch -> ch.isDigit() || ch == '.' || ch == ',' }.take(6) }, label = { Text("وزن (کیلوگرم)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                                OutlinedTextField(value = waist, onValueChange = { waist = it.filter(Char::isDigit).take(3) }, label = { Text("دور کمر (سانتی‌متر)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                                val bmi = (weight.replace(",", ".").toDoubleOrNull() ?: 0.0) / (1.82 * 1.82)
+                                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFFF0F3E9)).padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Column { Text("شاخص توده بدنی تخمینی", fontSize = 11.sp, color = Muted); Text(if (bmi > 0) "%.1f".format(java.util.Locale.US, bmi) else "—", fontSize = 25.sp, fontWeight = FontWeight.Black, color = Ink) }
+                                    Text("بر اساس قد ۱۸۲ سانتی‌متر", fontSize = 10.sp, color = Muted)
+                                }
+                                Button(onClick = { prefs.edit().putString("weight", weight).putString("waist_cm", waist).apply() }, modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = RoundedCornerShape(16.dp)) { Text("ذخیره اندازه‌ها") }
                             }
                         }
                         Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Color.White).padding(18.dp)) {
