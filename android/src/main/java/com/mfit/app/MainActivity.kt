@@ -131,7 +131,7 @@ private suspend fun loadCurrentWeather(context: Context): CurrentWeather {
         readTimeout = 8000
         requestMethod = "GET"
     }
-    try {
+    return try {
         val root = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
         val current = root.getJSONObject("current")
         CurrentWeather(
