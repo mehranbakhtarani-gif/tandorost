@@ -1371,10 +1371,20 @@ const foodCatalog=[
 {n:'بادام',a:['بادام','almond','almonds'],k:579,p:21.2,f:12.5,c:21.6,s:4.4,t:49.9,piece:1.2},
 {n:'گردو',a:['گردو','walnut','walnuts'],k:654,p:15.2,f:6.7,c:13.7,s:2.6,t:65.2,piece:4},
 {n:'خرما',a:['خرما','date','dates'],k:282,p:2.5,f:8,c:75,s:63,t:0.4,piece:8},
-{n:'پرتقال',a:['پرتقال','orange'],k:47,p:0.9,f:2.4,c:11.8,s:9.4,t:0.1,piece:130}
+{n:'پرتقال',a:['پرتقال','orange'],k:47,p:0.9,f:2.4,c:11.8,s:9.4,t:0.1,piece:130},
+{n:'نان بربری',a:['نان بربری','بربری'],k:270,p:9.5,f:2.5,c:54,s:2,t:1.5,piece:50},
+{n:'نان تافتون',a:['نان تافتون','تافتون'],k:275,p:9,f:2,c:56,s:1.5,t:1.5,piece:35},
+{n:'کباب کوبیده',a:['کباب کوبیده','کوبیده'],k:270,p:17,f:0,c:2,s:0,t:22,piece:100},
+{n:'جوجه کباب',a:['جوجه کباب','جوجه'],k:190,p:27,f:0,c:1,s:0,t:8,piece:100},
+{n:'قورمه‌سبزی',a:['قورمه سبزی','قرمه سبزی','قورمه‌سبزی'],k:150,p:8,f:3,c:12,s:2,t:8,piece:250},
+{n:'خورش قیمه',a:['خورش قیمه','قیمه'],k:160,p:8,f:3,c:15,s:2,t:8,piece:250},
+{n:'ماکارونی پخته',a:['ماکارونی','پاستا','pasta'],k:158,p:5.8,f:1.8,c:30.9,s:0.6,t:0.9,piece:200},
+{n:'عسل',a:['عسل','honey'],k:304,p:0.3,f:0,c:82.4,s:82.1,t:0,piece:7},
+{n:'روغن زیتون',a:['روغن زیتون','olive oil'],k:884,p:0,f:0,c:0,s:0,t:100,piece:14},
+{n:'کره',a:['کره','butter'],k:717,p:0.9,f:0,c:0.1,s:0.1,t:81,piece:5}
 ];
 function normalizeFoodName(v){return String(v||'').toLowerCase().replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/[\u200c\sـ]/g,'').replace(/[ۀة]/g,'ه').trim()}
-function findFood(name){const q=normalizeFoodName(name);if(!q)return null;return foodCatalog.find(x=>x.a.some(a=>normalizeFoodName(a)===q||q.includes(normalizeFoodName(a))||normalizeFoodName(a).includes(q)))||null}
+function findFood(name){const q=normalizeFoodName(name);if(!q)return null;return foodCatalog.find(x=>x.a.some(a=>normalizeFoodName(a)===q||q.includes(normalizeFoodName(a))))||null}
 function foodQuantity(food){const amount=Math.max(0,Number($('foodAmount').value)||0),unit=$('foodUnit').value;return amount*(unit==='piece'?(food.piece||100):1)}
 function foodNutrition(food,grams){const scale=grams/100;return {cal:Math.round(food.k*scale),protein:+(food.p*scale).toFixed(1),fiber:+(food.f*scale).toFixed(1),carbs:+(food.c*scale).toFixed(1),sugar:+(food.s*scale).toFixed(1),fat:+(food.t*scale).toFixed(1)}}
 function renderFoodEstimate(){const box=$('foodEstimate');if(!box)return;const food=findFood($('foodName').value);if(!food){box.innerHTML='<b>ارزش غذایی</b><p class="sub">این ماده در بانک داخلی پیدا نشد. نام را دقیق‌تر وارد کن یا از نام‌های پیشنهادی استفاده کن.</p>';return}const grams=foodQuantity(food),v=foodNutrition(food,grams),unit=$('foodUnit').value==='piece'?'عدد':$('foodUnit').value==='ml'?'میلی‌لیتر':'گرم';box.innerHTML='<b>'+esc(food.n)+' • '+fa(grams.toFixed(0))+' گرم مبنا</b><div class="food-estimate-grid"><span>کالری <strong>'+fa(v.cal)+'</strong></span><span>پروتئین <strong>'+fa(v.protein)+' g</strong></span><span>فیبر <strong>'+fa(v.fiber)+' g</strong></span><span>کربوهیدرات <strong>'+fa(v.carbs)+' g</strong></span><span>قند <strong>'+fa(v.sugar)+' g</strong></span><span>چربی <strong>'+fa(v.fat)+' g</strong></span></div><small class="sub">مقادیر تقریبی برای '+fa($('foodAmount').value||0)+' '+unit+'؛ بسته به نوع و روش پخت تغییر می‌کند.</small>'}
