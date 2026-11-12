@@ -1,9 +1,18 @@
 package com.mfit.app
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.dp
 
 internal object MFitPalette {
     val Ink = Color(0xFF151B1A)
@@ -18,6 +27,34 @@ internal object MFitPalette {
     val Positive = Color(0xFF3D8064)
     val Danger = Color(0xFFB94A43)
 }
+
+/**
+ * A translucent, layered glass-like surface. Android Compose does not expose
+ * a general backdrop blur for arbitrary siblings, so this uses translucency,
+ * a soft gradient, a fine highlight stroke and a lifted edge.
+ */
+internal fun Modifier.glassSurface(
+    shape: Shape = RoundedCornerShape(22.dp),
+    tint: Color = Color.White
+): Modifier = this
+    .shadow(14.dp, shape, clip = false)
+    .clip(shape)
+    .background(
+        Brush.linearGradient(
+            listOf(
+                tint.copy(alpha = .68f),
+                Color.White.copy(alpha = .48f),
+                tint.copy(alpha = .34f)
+            )
+        )
+    )
+    .border(
+        1.dp,
+        Brush.linearGradient(
+            listOf(Color.White.copy(alpha = .92f), Color.White.copy(alpha = .24f))
+        ),
+        shape
+    )
 
 @Composable
 internal fun MFitTheme(content: @Composable () -> Unit) {
