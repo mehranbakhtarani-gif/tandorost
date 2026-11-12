@@ -21,8 +21,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import org.json.JSONArray
 import org.json.JSONObject
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 
 private val Ink = Color(0xFF17191B)
 private val Lime = Color(0xFFD7FF00)
@@ -34,6 +42,7 @@ class MainActivity : ComponentActivity() {
     private var tracking by mutableStateOf(false)
     private var liveDistance by mutableFloatStateOf(0f)
     private var liveSeconds by mutableLongStateOf(0L)
+    private var routePoints by mutableStateOf<List<Pair<Double, Double>>>(emptyList())
     private var lastActivity by mutableStateOf("—")
     private var imported by mutableStateOf(false)
     private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
@@ -58,14 +67,15 @@ class MainActivity : ComponentActivity() {
         imported = prefs.getBoolean("legacy_imported", false)
         val filter = IntentFilter("com.mfit.app.TRACK_UPDATE")
         if (Build.VERSION.SDK_INT >= 33) { registerReceiver(receiver, filter, RECEIVER_NOT_EXPORTED) } else { registerReceiver(receiver, filter) }
-        setContent { MFitApp(tracking, liveDistance, liveSeconds, lastActivity, imported,
+        setContent { MFitApp(tracking, liveDistance, liveSeconds, lastActivity, imported, routePoints, 
             onStart = { requestTracking() }, onStop = { stopTracking() },
             onImport = { importLauncher.launch(arrayOf("application/json", "text/*")) }) }
     }
     private fun refreshTrack() {
         liveDistance = prefs.getFloat("live_distance", 0f)
         liveSeconds = prefs.getLong("live_seconds", 0L)
-        tracking = liveSeconds > 0L
+        routePoints = try { val a = JSONArray(prefs.getString("route_points", "[]")); (0 until a.length()).mapNotNull { i -> val p = a.optJSONArray(i); if (p != null && p.length() >= 2) p.getDouble(0) to p.getDouble(1) else null } } catch (_: Exception) { emptyList() }
+        tracking = prefs.getBoolean("tracking_active", false)
         lastActivity = prefs.getString("last_activity", "—") ?: "—"
     }
     private fun requestTracking() {
@@ -74,15 +84,15 @@ class MainActivity : ComponentActivity() {
         val missing = permissions.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
         if (missing.isEmpty()) startTracking() else permissionLauncher.launch(missing.toTypedArray())
     }
-    private fun startTracking() { ContextCompat.startForegroundService(this, Intent(this, TrackingService::class.java)); tracking = true }
-    private fun stopTracking() { stopService(Intent(this, TrackingService::class.java)); tracking = false; refreshTrack() }
+    private fun startTracking() { prefs.edit().putFloat("live_distance", 0f).putLong("live_seconds", 0L).putString("route_points", "[]").putBoolean("tracking_active", true).apply(); refreshTrack(); ContextCompat.startForegroundService(this, Intent(this, TrackingService::class.java)); tracking = true }
+    private fun stopTracking() { stopService(Intent(this, TrackingService::class.java)); tracking = false; prefs.edit().putBoolean("tracking_active", false).apply(); refreshTrack() }
     override fun onDestroy() { unregisterReceiver(receiver); super.onDestroy() }
 }
 
 private enum class Tab(val label: String) { HOME("خانه"), ACTIVITY("فعالیت"), FOOD("تغذیه"), SLEEP("خواب"), PROFILE("پروفایل") }
 
 @Composable
-private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActivity: String, imported: Boolean,
+private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActivity: String, imported: Boolean, routePoints: List<Pair<Double, Double>>,
                     onStart: () -> Unit, onStop: () -> Unit, onImport: () -> Unit) {
     var tab by remember { mutableStateOf(Tab.HOME) }
     var water by remember { mutableIntStateOf(0) }
@@ -197,7 +207,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, lastActiv
                         }
                     }
                     Tab.ACTIVITY -> {
-                        ActivityPanel(tracking, distance, seconds, onStart, onStop)
+                        ActivityPanel(tracking, distance, seconds, routePoints, onStart, onStop)
                         SectionTitle("آخرین رکورد", "فعالیت ذخیره‌شده")
                         DashboardStat("مسافت آخرین فعالیت", lastActivity, "کیلومتر", Icons.Default.Route, Modifier.fillMaxWidth())
                     }
@@ -324,12 +334,46 @@ private fun DashboardMini(title: String, value: String, unit: String, icon: andr
     }
 }
 
-@Composable private fun ActivityPanel(tracking: Boolean, distance: Float, seconds: Long, onStart: () -> Unit, onStop: () -> Unit) {
-    Box(Modifier.fillMaxWidth().height(210.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xFFE5E9E1)), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Icon(Icons.Default.Map, null, tint = Ink, modifier = Modifier.size(38.dp))
-            Text("ردیابی GPS", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            Text("برای شروع، دسترسی موقعیت مکانی را فعال کن", color = Muted, fontSize = 12.sp)
+@Composable private fun ActivityPanel(tracking: Boolean, distance: Float, seconds: Long, routePoints: List<Pair<Double, Double>>, onStart: () -> Unit, onStop: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val mapView = remember {
+        Configuration.getInstance().userAgentValue = context.packageName
+        MapView(context).apply {
+            setTileSource(TileSourceFactory.MAPNIK)
+            setMultiTouchControls(true)
+            controller.setZoom(3.0)
+            controller.setCenter(GeoPoint(20.0, 0.0))
+            onResume()
+        }
+    }
+    DisposableEffect(mapView) { onDispose { mapView.onPause(); mapView.onDetach() } }
+    Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+        Column {
+            AndroidView(factory = { mapView }, modifier = Modifier.fillMaxWidth().height(260.dp), update = { map ->
+                map.overlays.removeAll { it is Polyline || it is Marker }
+                if (routePoints.isNotEmpty()) {
+                    val geo = routePoints.map { GeoPoint(it.first, it.second) }
+                    val line = Polyline().apply {
+                        setPoints(geo)
+                        outlinePaint.color = android.graphics.Color.rgb(155, 190, 0)
+                        outlinePaint.strokeWidth = 11f
+                    }
+                    map.overlays.add(line)
+                    val pin = Marker(map).apply {
+                        position = geo.last()
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                        title = if (tracking) "موقعیت فعلی" else "پایان مسیر"
+                    }
+                    map.overlays.add(pin)
+                    map.controller.setCenter(geo.last())
+                    if (map.zoomLevelDouble < 14.0) map.controller.setZoom(16.0)
+                }
+                map.invalidate()
+            })
+            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(if (routePoints.isEmpty()) "نقشه آماده ثبت مسیر" else "${routePoints.size} نقطه ثبت‌شده", fontSize = 12.sp, color = Muted)
+                Text(if (tracking) "GPS فعال" else "OpenStreetMap", fontSize = 11.sp, color = if (tracking) Color(0xFF43834B) else Muted, fontWeight = FontWeight.Bold)
+            }
         }
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
