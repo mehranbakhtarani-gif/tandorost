@@ -952,6 +952,32 @@ body{background:var(--bg)!important;color:var(--ink)!important;font-family:Tahom
 @media(min-width:700px){#appRoot.app{padding-top:24px!important}}
 @media(prefers-reduced-motion:reduce){#appRoot *,#nav *{animation:none!important;transition:none!important}}
 
+
+/* Mobile scroll fix: allow every tab to scroll vertically without the dock covering its last controls */
+html,body{
+  height:auto!important;
+  min-height:100%!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior-y:contain;
+  -webkit-overflow-scrolling:touch;
+}
+#appRoot.app,#appRoot.app.home-mode{
+  height:auto!important;
+  max-height:none!important;
+  overflow-x:hidden!important;
+  overflow-y:visible!important;
+}
+#appRoot>section.tab,
+#appRoot>section.tab.active{
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+  touch-action:pan-y;
+  padding-bottom:calc(132px + env(safe-area-inset-bottom))!important;
+}
+#nav.bottomnav{touch-action:pan-x;pointer-events:auto}
+
 </style></head>
 <body><main class="app home-mode" id="appRoot">
 <header><div class="brand"><small id="today"></small><h1>تندرست</h1><small>قدم‌های کوچک، حال بهتر 🌱</small></div><div class="header-actions"><button class="weather-chip" id="weatherHeader" type="button" aria-label="آب‌وهوا">🌤️ <span id="weatherHeaderText">آب‌وهوا</span></button><button class="install-btn" id="installBtn" hidden>نصب اپ</button><button class="iconbtn" id="themeBtn" aria-label="تغییر پوسته">☾</button></div></header>
