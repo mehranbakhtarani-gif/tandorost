@@ -94,10 +94,21 @@ class TrackingService : Service(), LocationListener {
             val entry = "$date|%.2f km • %02d:%02d".format(Locale.US, meters / 1000f, seconds / 60, seconds % 60)
             history.put(0, entry)
             while (history.length() > 30) history.remove(history.length() - 1)
+            val today = java.time.LocalDate.now().toString()
+            val weight = p.getString("weight", "70")?.replace(",", ".")?.toDoubleOrNull()?.coerceIn(30.0, 250.0) ?: 70.0
+            val gpsCalories = (weight * (meters / 1000.0) * 0.7).toInt().coerceAtLeast(0)
+            val logDate = p.getString("workout_log_date", "")
+            val workoutLog = if (logDate == today) {
+                try { p.getString("workout_log_today", "")?.split("\n")?.filter { it.isNotBlank() }?.toMutableList() ?: mutableListOf() }
+                catch (_: Exception) { mutableListOf() }
+            } else mutableListOf()
+            if (gpsCalories > 0) workoutLog.add("پیاده‌روی/دویدن GPS|${(seconds / 60).coerceAtLeast(1)}|$gpsCalories")
             p.edit().putString("activity_history", history.toString())
                 .putString("last_activity", "%.2f".format(Locale.US, meters / 1000f))
-                .putLong("last_activity_seconds", seconds).putFloat("live_distance", 0f)
-                .putLong("live_seconds", 0L).putBoolean("tracking_active", false).apply()
+                .putLong("last_activity_seconds", seconds)
+                .putString("workout_log_date", today).putString("workout_log_today", workoutLog.joinToString("\n"))
+                .putFloat("live_distance", 0f).putLong("live_seconds", 0L)
+                .putBoolean("tracking_active", false).apply()
         } else p.edit().putBoolean("tracking_active", false).apply()
         sendBroadcast(Intent("com.mfit.app.TRACK_UPDATE").setPackage(packageName))
         super.onDestroy()
