@@ -250,7 +250,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
         if (tracking && sessionStartedAt > 0L) {
             while (true) {
                 displaySeconds = ((System.currentTimeMillis() - sessionStartedAt) / 1000L).coerceAtLeast(0L)
-                delay(250L)
+                delay(1000L)
             }
         } else displaySeconds = seconds
     }
@@ -1025,7 +1025,7 @@ private val foods = listOf(
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             matches.forEach { food ->
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp))
-                    .background(if(selected == food) Color(0xFFEAF2D4) else Color.White)
+                    .glassSurface(RoundedCornerShape(13.dp), if (selected == food) Color(0xFFEAF2D4) else Color(0xFFF4F7F2))
                     .clickable { selected = food; onMeal(food.name); portion = null }.padding(horizontal = 13.dp, vertical = 11.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(food.name, fontSize = 13.sp, fontWeight = if(selected == food) FontWeight.Bold else FontWeight.Medium, color = Ink)
