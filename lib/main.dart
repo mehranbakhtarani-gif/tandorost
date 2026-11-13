@@ -9,6 +9,7 @@ import 'features/nutrition/food_catalog.dart';
 import 'features/nutrition/food_diary.dart';
 import 'features/nutrition/food_search_repository.dart';
 import 'features/progress/progress_log.dart';
+import 'features/progress/route_share_card.dart';
 
 const ink = Color(0xFF17221C), muted = Color(0xFF78847B);
 const canvas = Color(0xFFF4F6F0), lime = Color(0xFFB9EF45);
@@ -551,6 +552,15 @@ class RoutePage extends StatelessWidget {
       final center = hasFix ? points.last : const LatLng(0, 0);
       return ListView(padding: const EdgeInsets.only(bottom: 24), children: [
         const PageHeader('REAL GPS TRACKING', 'نقشه و مسیر'),
+        Padding(padding: const EdgeInsets.fromLTRB(18, 0, 18, 14), child: FilledButton.icon(
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => RouteShareCardPage(tracker: tracker),
+          )),
+          icon: const Icon(Icons.ios_share_rounded),
+          label: const Text('ساخت کارت اشتراک‌گذاری مسیر'),
+          style: FilledButton.styleFrom(backgroundColor: green, foregroundColor: Colors.white,
+            minimumSize: const Size.fromHeight(48), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+        )),
         Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Container(
           height: 440, clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(color: const Color(0xFFE7EDE2), borderRadius: BorderRadius.circular(27)),
