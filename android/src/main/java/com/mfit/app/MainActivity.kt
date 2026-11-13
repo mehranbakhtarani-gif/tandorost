@@ -523,40 +523,27 @@ private fun MFitApp(tracking: Boolean, sessionPaused: Boolean, distance: Float, 
                         FastingPanel(prefs)
                         val todayKcal = mealLog.sumOf { it.split(" • ").getOrNull(2)?.removeSuffix(" kcal")?.toDoubleOrNull() ?: 0.0 }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Column(Modifier.weight(1.7f).clip(RoundedCornerShape(topStart = 27.dp, topEnd = 27.dp, bottomStart = 27.dp, bottomEnd = 8.dp))
-                                .background(Lime).clickable { tab = Tab.ACTIVITY }.padding(17.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                                Icon(Icons.Default.DirectionsRun, null, tint = Color(0xFF17221C), modifier = Modifier.size(25.dp))
-                                Spacer(Modifier.height(4.dp))
-                                Text("حرکت امروز", color = Color(0xFF17221C), fontSize = 17.sp, fontWeight = FontWeight.Black)
-                                Text("شروع فعالیت و ثبت مسیر", color = Color(0xFF43572A), fontSize = 10.sp)
-                                Row(verticalAlignment = Alignment.CenterVertically) { Text("شروع کن", color = Color(0xFF17221C), fontSize = 11.sp, fontWeight = FontWeight.Bold); Icon(Icons.Default.ArrowBack, null, tint = Color(0xFF17221C), modifier = Modifier.size(15.dp)) }
-                            }
-                            Column(Modifier.weight(1f).clip(RoundedCornerShape(topStart = 27.dp, topEnd = 8.dp, bottomStart = 27.dp, bottomEnd = 27.dp))
-                                .background(Color.White).clickable { tab = Tab.FOOD }.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Icon(Icons.Default.LocalFireDepartment, null, tint = Color(0xFFEA914A), modifier = Modifier.size(23.dp))
-                                Spacer(Modifier.height(4.dp))
-                                Text("دریافت انرژی", color = Color(0xFF17221C), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                Text(todayKcal.toInt().toString(), color = Color(0xFF254D37), fontSize = 24.sp, fontWeight = FontWeight.Black)
-                                Text("کیلوکالری", color = Color(0xFF78847B), fontSize = 9.sp)
-                            }
-                        }
-                        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(23.dp)).background(Color.White).clickable { tab = Tab.PROFILE }.padding(17.dp),
-                            verticalArrangement = Arrangement.spacedBy(13.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f)) {
-                                    Text("مسیر پیشرفت", color = Color(0xFF254D37), fontSize = 17.sp, fontWeight = FontWeight.Black)
-                                    Text("بر اساس داده‌های ثبت‌شده", color = Color(0xFF78847B), fontSize = 10.sp)
+                            Column(Modifier.weight(1.15f).clip(RoundedCornerShape(22.dp))
+                                .background(Color(0xFFE4F0E9)).clickable { tab = Tab.ACTIVITY }.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                Icon(Icons.Default.DirectionsRun, null, tint = Color(0xFF568A70), modifier = Modifier.size(24.dp))
+                                Text("حرکت امروز", color = Color(0xFF294C3B), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text("شروع فعالیت و ثبت مسیر", color = Color(0xFF718779), fontSize = 10.sp)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("شروع کن", color = Color(0xFF426D56), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Icon(Icons.Default.ArrowBack, null, tint = Color(0xFF426D56), modifier = Modifier.size(14.dp))
                                 }
-                                TextButton(onClick = { tab = Tab.PROFILE }) { Text("جزئیات", color = Color(0xFF254D37)) }
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                HomeProgressValue("وزن", weight, "kg", Modifier.weight(1f))
-                                HomeProgressValue("دور کمر", waist, "cm", Modifier.weight(1f))
-                                HomeProgressValue("کالری تمرین", workoutCaloriesToday.toString(), "kcal", Modifier.weight(1f))
+                            Column(Modifier.weight(1f).clip(RoundedCornerShape(22.dp))
+                                .background(Color.White).clickable { tab = Tab.FOOD }.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                Icon(Icons.Default.LocalFireDepartment, null, tint = Color(0xFFE99A62), modifier = Modifier.size(23.dp))
+                                Text("کالری دریافتی", color = Color(0xFF718096), fontSize = 11.sp)
+                                Text(todayKcal.toInt().toString(), color = Color(0xFF293A53), fontSize = 25.sp, fontWeight = FontWeight.Black)
+                                Text("کیلوکالری", color = Color(0xFF929DB0), fontSize = 9.sp)
                             }
-                            Text("روندها فقط با ثبت اندازه‌گیری واقعی نمایش داده می‌شوند.", color = Color(0xFF78847B), fontSize = 9.sp)
                         }
-                        WeatherPanel(weatherPermissionGranted, onWeatherPermission)
+                        HomeTrendPanel(weeklySnapshots)
                         SmartCoachPanel(
                             water = water, mealCount = mealLog.size, sleepHours = sleep,
                             workoutCalories = workoutCaloriesToday, habitsCompleted = habitsDone.count { it },
@@ -564,6 +551,7 @@ private fun MFitApp(tracking: Boolean, sessionPaused: Boolean, distance: Float, 
                             weeklyAverageWater = if (weeklySnapshots.isEmpty()) 0 else weeklySnapshots.sumOf { it.water } / weeklySnapshots.size,
                             onFood = { tab = Tab.FOOD }, onRoutine = { tab = Tab.ROUTINE }
                         )
+                        WeatherPanel(weatherPermissionGranted, onWeatherPermission)
                         VoiceCoachPanel(
                             message = when {
                                 sleep < 6f -> "امروز تمرین سبک را انتخاب کن و خواب را در اولویت بگذار."
@@ -726,32 +714,187 @@ private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
 private fun FastingPanel(prefs: android.content.SharedPreferences) {
     var startedAt by remember { mutableLongStateOf(prefs.getLong("fasting_started_at", 0L)) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(startedAt) {
-        if (startedAt > 0L) while (true) { now = System.currentTimeMillis(); delay(1000L) }
-    }
+    var goalHours by remember { mutableIntStateOf(prefs.getInt("fasting_goal_hours", 16).coerceIn(8, 24)) }
+    var goalMenu by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { while (true) { now = System.currentTimeMillis(); delay(1000L) } }
+
     val elapsed = if (startedAt > 0L) ((now - startedAt) / 1000L).coerceAtLeast(0L) else 0L
-    val hours = elapsed / 3600L
-    val minutes = (elapsed % 3600L) / 60L
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(29.dp))
-        .background(Brush.linearGradient(listOf(Color(0xFF315F42), Color(0xFF173D2B), Color(0xFF10291E))))
-        .padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    val goalSeconds = goalHours * 3600L
+    val progress = (elapsed.toFloat() / goalSeconds.toFloat()).coerceIn(0f, 1f)
+    val animatedProgress by animateFloatAsState(progress, tween(700, easing = FastOutSlowInEasing), label = "fasting-progress")
+    val startTime = if (startedAt > 0L) java.time.Instant.ofEpochMilli(startedAt).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
+        else java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
+    val endTime = startTime.plusSeconds(goalSeconds)
+    val startLabel = "%02d:%02d".format(startTime.hour, startTime.minute)
+    val endLabel = "%02d:%02d".format(endTime.hour, endTime.minute)
+    val timerLabel = "%02d:%02d:%02d".format(elapsed / 3600L, (elapsed % 3600L) / 60L, elapsed % 60L)
+    val startAngle = startTime.hour / 24f * 360f + startTime.minute / 1440f * 360f - 90f
+    val goalSweep = goalHours / 24f * 360f
+    val progressSweep = goalSweep * animatedProgress
+
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(Color.White).padding(17.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("MFIT · FASTING", color = Color(0xFFB9EF45), fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
-            Text("روزه‌داری", color = Color.White.copy(alpha = .8f), fontSize = 10.sp)
-        }
-        Text("روزه‌داری آگاهانه", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
-        Text(if (startedAt > 0L) "زمان سپری‌شده از شروع بازه" else "بازه‌ی تغذیه و استراحتت را با آگاهی مدیریت کن.", color = Color.White.copy(alpha = .75f), fontSize = 11.sp)
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            if (startedAt > 0L) {
-                Text("%02d:%02d".format(hours, minutes), color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
-                Button(onClick = { startedAt = 0L; prefs.edit().remove("fasting_started_at").putLong("last_fasting_seconds", elapsed).apply() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB9EF45), contentColor = Color(0xFF17221C))) { Text("پایان بازه") }
-            } else {
-                Text("هنوز بازه‌ای ثبت نشده", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                Button(onClick = { startedAt = System.currentTimeMillis(); now = startedAt; prefs.edit().putLong("fasting_started_at", startedAt).apply() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB9EF45), contentColor = Color(0xFF17221C))) { Text("شروع فستینگ") }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("فستینگ من", color = Color(0xFF293A53), fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                Text(if (startedAt > 0L) "زمان سپری‌شده از شروع فست" else "بازه روزه‌داری خودت را شروع کن", color = Color(0xFF8995A9), fontSize = 10.sp)
+            }
+            Box {
+                TextButton(onClick = { goalMenu = true }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) {
+                    Icon(Icons.Default.Flag, null, tint = Color(0xFF7897C8), modifier = Modifier.size(15.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("هدف $goalHours ساعت", color = Color(0xFF60799F), fontSize = 10.sp)
+                }
+                DropdownMenu(expanded = goalMenu, onDismissRequest = { goalMenu = false }) {
+                    listOf(12, 14, 16, 18, 20, 24).forEach { hours ->
+                        DropdownMenuItem(text = { Text("$hours ساعت") }, onClick = {
+                            goalHours = hours
+                            prefs.edit().putInt("fasting_goal_hours", hours).apply()
+                            goalMenu = false
+                        })
+                    }
+                }
             }
         }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            Box(Modifier.size(184.dp), contentAlignment = Alignment.Center) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val stroke = 13.dp.toPx()
+                    val diameter = size.minDimension - stroke
+                    val topLeft = androidx.compose.ui.geometry.Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
+                    val arcSize = androidx.compose.ui.geometry.Size(diameter, diameter)
+                    drawCircle(Color(0xFFF0F3F8), radius = diameter / 2f, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
+                    drawArc(Color(0xFFE8EDF5), startAngle, goalSweep, false, topLeft, arcSize,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+                    if (progressSweep > 0f) drawArc(
+                        brush = Brush.sweepGradient(listOf(Color(0xFF55C7B4), Color(0xFF6C9DE8), Color(0xFFA88BE8), Color(0xFF55C7B4))),
+                        startAngle = startAngle, sweepAngle = progressSweep, useCenter = false, topLeft = topLeft, size = arcSize,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                    )
+                    fun marker(angle: Float, color: Color) {
+                        val radians = Math.toRadians(angle.toDouble())
+                        val radius = diameter / 2f
+                        val center = androidx.compose.ui.geometry.Offset(size.width / 2f + kotlin.math.cos(radians).toFloat() * radius,
+                            size.height / 2f + kotlin.math.sin(radians).toFloat() * radius)
+                        drawCircle(Color.White, 10.dp.toPx(), center)
+                        drawCircle(color, 7.dp.toPx(), center)
+                    }
+                    marker(startAngle, Color(0xFF43BBAA))
+                    marker(startAngle + goalSweep, Color(0xFF9B7DDE))
+                    if (progressSweep > 0f && progress < 1f) marker(startAngle + progressSweep, Color(0xFF6798E5))
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(if (startedAt > 0L) timerLabel else "۰۰:۰۰:۰۰", color = Color(0xFF293A53), fontSize = 25.sp, fontWeight = FontWeight.Black)
+                    Text(if (startedAt > 0L) "${(progress * 100).toInt()}٪ تکمیل هدف" else "آماده شروع", color = Color(0xFF8794A9), fontSize = 10.sp)
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("شروع فست", color = Color(0xFF8995A9), fontSize = 9.sp)
+                Text(if (startedAt > 0L) startLabel else "—", color = Color(0xFF3BAE9E), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("پایان هدف", color = Color(0xFF8995A9), fontSize = 9.sp)
+                Text(if (startedAt > 0L) endLabel else "پس از شروع", color = Color(0xFF9276D0), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("هدف", color = Color(0xFF8995A9), fontSize = 9.sp)
+                Text("$goalHours ساعت", color = Color(0xFF526783), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        if (startedAt > 0L) {
+            val remaining = (goalSeconds - elapsed).coerceAtLeast(0L)
+            Text(if (remaining > 0L) "تا پایان هدف ${remaining / 3600L} ساعت و ${(remaining % 3600L) / 60L} دقیقه باقی مانده"
+                else "هدف فست تکمیل شد؛ می‌توانی بازه را پایان بدهی.", color = Color(0xFF8290A5), fontSize = 10.sp)
+            Button(onClick = {
+                startedAt = 0L
+                prefs.edit().remove("fasting_started_at").putLong("last_fasting_seconds", elapsed).apply()
+            }, modifier = Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(15.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEAF1F8), contentColor = Color(0xFF405B7B))) { Text("پایان فست") }
+        } else {
+            Button(onClick = {
+                startedAt = System.currentTimeMillis()
+                now = startedAt
+                prefs.edit().putLong("fasting_started_at", startedAt).apply()
+            }, modifier = Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(15.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE8F2EC), contentColor = Color(0xFF3E7658))) { Text("شروع فستینگ") }
+        }
+    }
+}
+
+@Composable
+private fun HomeTrendPanel(snapshots: List<DailyWellnessSnapshot>) {
+    val values = snapshots.takeLast(7)
+    val chartValues = values.map { it.workoutCalories.toFloat().coerceAtLeast(0f) }
+    val hasRecordedTrend = chartValues.size >= 2 && chartValues.any { it > 0f }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Color.White).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("روند پیشرفت", color = Color(0xFF293A53), fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+                Text("کالری تمرین ثبت‌شده", color = Color(0xFF8995A9), fontSize = 10.sp)
+            }
+            Text("۷ روز اخیر", color = Color(0xFF8995A9), fontSize = 10.sp)
+        }
+        if (hasRecordedTrend) {
+            Box(Modifier.fillMaxWidth().height(132.dp).clip(RoundedCornerShape(17.dp)).background(Color(0xFFF7F9FD)).padding(9.dp)) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val left = 4.dp.toPx()
+                    val right = size.width - 4.dp.toPx()
+                    val top = 8.dp.toPx()
+                    val bottom = size.height - 8.dp.toPx()
+                    val maxValue = (chartValues.maxOrNull() ?: 1f).coerceAtLeast(1f)
+                    val points = chartValues.mapIndexed { index, value ->
+                        val x = if (chartValues.size == 1) left else left + (right - left) * index / (chartValues.size - 1).toFloat()
+                        val y = bottom - (value / maxValue) * (bottom - top)
+                        androidx.compose.ui.geometry.Offset(x, y)
+                    }
+                    repeat(3) { row ->
+                        val y = top + (bottom - top) * row / 2f
+                        drawLine(Color(0xFFE8EDF5), androidx.compose.ui.geometry.Offset(left, y),
+                            androidx.compose.ui.geometry.Offset(right, y), 1.dp.toPx())
+                    }
+                    val curve = androidx.compose.ui.graphics.Path().apply {
+                        if (points.isNotEmpty()) {
+                            moveTo(points.first().x, points.first().y)
+                            for (index in 1 until points.size) {
+                                val previous = points[index - 1]
+                                val current = points[index]
+                                val midX = (previous.x + current.x) / 2f
+                                cubicTo(midX, previous.y, midX, current.y, current.x, current.y)
+                            }
+                        }
+                    }
+                    val fill = androidx.compose.ui.graphics.Path().apply {
+                        addPath(curve)
+                        if (points.isNotEmpty()) {
+                            lineTo(points.last().x, bottom)
+                            lineTo(points.first().x, bottom)
+                            close()
+                        }
+                    }
+                    drawPath(fill, Color(0xFF77A4EA).copy(alpha = .13f))
+                    drawPath(curve, Color(0xFF6798E5), style = androidx.compose.ui.graphics.drawscope.Stroke(3.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
+                    points.forEach { point ->
+                        drawCircle(Color.White, 5.dp.toPx(), point)
+                        drawCircle(Color(0xFF6798E5), 3.dp.toPx(), point)
+                    }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(values.firstOrNull()?.date?.takeLast(5) ?: "", color = Color(0xFF9AA5B5), fontSize = 9.sp)
+                Text(values.lastOrNull()?.date?.takeLast(5) ?: "", color = Color(0xFF9AA5B5), fontSize = 9.sp)
+            }
+        } else {
+            Box(Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(17.dp)).background(Color(0xFFF7F9FD)),
+                contentAlignment = Alignment.Center) {
+                Text("با ثبت چند جلسه تمرین، نمودار روند واقعی اینجا نمایش داده می‌شود.",
+                    color = Color(0xFF8995A9), fontSize = 11.sp, textAlign = TextAlign.Center)
+            }
+        }
+        Text("این نمودار از ثبت‌های واقعی تمرین ساخته می‌شود؛ وزن پروفایل به‌عنوان اندازه‌گیری جدید محاسبه نمی‌شود.",
+            color = Color(0xFF9AA5B5), fontSize = 9.sp)
     }
 }
 
