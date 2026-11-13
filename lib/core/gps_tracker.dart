@@ -36,6 +36,7 @@ class GpsTracker extends ChangeNotifier {
         autoStart: false,
         autoStartOnBoot: false,
         isForegroundMode: true,
+        foregroundServiceTypes: [AndroidForegroundType.location],
         initialNotificationTitle: 'MFit · تمرین فعال',
         initialNotificationContent: 'در انتظار دریافت موقعیت GPS',
         foregroundServiceNotificationId: 731,
