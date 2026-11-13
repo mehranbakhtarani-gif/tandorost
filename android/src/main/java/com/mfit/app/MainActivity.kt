@@ -522,7 +522,7 @@ private fun MFitApp(tracking: Boolean, sessionPaused: Boolean, distance: Float, 
                     Tab.HOME -> {
                         FastingPanel(prefs)
                         val todayKcal = mealLog.sumOf { it.split(" • ").getOrNull(2)?.removeSuffix(" kcal")?.toDoubleOrNull() ?: 0.0 }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Stretch) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Column(Modifier.weight(1.7f).clip(RoundedCornerShape(topStart = 27.dp, topEnd = 27.dp, bottomStart = 27.dp, bottomEnd = 8.dp))
                                 .background(Lime).clickable { tab = Tab.ACTIVITY }.padding(17.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                                 Icon(Icons.Default.DirectionsRun, null, tint = Color(0xFF17221C), modifier = Modifier.size(25.dp))
