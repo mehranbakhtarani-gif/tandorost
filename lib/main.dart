@@ -263,7 +263,7 @@ class ActivityPage extends StatelessWidget {
           const Text('مدت زمان جلسه تمرین', style: TextStyle(color: Colors.white70, fontSize: 11)),
           const SizedBox(height: 24),
           Row(children: [
-            Expanded(child: FilledButton.icon(onPressed: () async { if (session.isActive) { await session.pause(); await gps.stop(); } else { await session.start(); await gps.start(); } }, icon: Icon(session.isActive ? Icons.pause_rounded : Icons.play_arrow_rounded), label: Text(session.isActive ? 'توقف موقت' : 'شروع تمرین'), style: FilledButton.styleFrom(backgroundColor: lime, foregroundColor: ink, padding: const EdgeInsets.symmetric(vertical: 14)))),
+            Expanded(child: FilledButton.icon(onPressed: () async { if (session.isActive) { await session.pause(); await gps.stop(); } else { final resume = session.elapsed > Duration.zero; await session.start(); await gps.start(resume: resume); } }, icon: Icon(session.isActive ? Icons.pause_rounded : Icons.play_arrow_rounded), label: Text(session.isActive ? 'توقف موقت' : 'شروع تمرین'), style: FilledButton.styleFrom(backgroundColor: lime, foregroundColor: ink, padding: const EdgeInsets.symmetric(vertical: 14)))),
             const SizedBox(width: 10),
             IconButton.filledTonal(onPressed: () async { await session.reset(); await gps.stop(); }, icon: const Icon(Icons.restart_alt_rounded), style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(.15), foregroundColor: Colors.white)),
           ]),
