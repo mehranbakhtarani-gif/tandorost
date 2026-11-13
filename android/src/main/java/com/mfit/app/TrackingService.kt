@@ -10,6 +10,10 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.os.PowerManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Handler
 import android.os.Looper
 import androidx.core.content.ContextCompat
@@ -18,13 +22,15 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class TrackingService : Service(), LocationListener {
+class TrackingService : Service(), LocationListener, SensorEventListener {
     private lateinit var manager: LocationManager
     private var distance = 0f
     private var last: Location? = null
     private var startedAt = 0L
     private var lastAcceptedAt = 0L
     private var pauseRequested = false
+    private lateinit var sensorManager: SensorManager
+    private var stepSensor: Sensor? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private val timerHandler = Handler(Looper.getMainLooper())
     private val timerTick = object : Runnable {
@@ -47,6 +53,11 @@ class TrackingService : Service(), LocationListener {
         lastAcceptedAt = now
         distance = prefs.getFloat("live_distance", 0f)
         last = null
+        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
+        stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR)
+        if (stepSensor != null && (Build.VERSION.SDK_INT < 29 || ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED)) {
+            sensorManager.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_NORMAL)
+        }
         wakeLock = (getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:activity-tracking").apply {
             setReferenceCounted(false)
             acquire()
@@ -78,6 +89,15 @@ class TrackingService : Service(), LocationListener {
         }
         timerHandler.post(timerTick)
     }
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event?.sensor?.type == Sensor.TYPE_STEP_DETECTOR) {
+            val prefs = getSharedPreferences("mfit_native", MODE_PRIVATE)
+            val steps = prefs.getInt("live_steps", 0) + event.values.size.coerceAtLeast(1)
+            prefs.edit().putInt("live_steps", steps).apply()
+            sendBroadcast(Intent("com.mfit.app.TRACK_UPDATE").setPackage(packageName))
+        }
+    }
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
     override fun onLocationChanged(location: Location) {
         if (location.accuracy > 35f) return
         val now = System.currentTimeMillis()
@@ -102,7 +122,9 @@ class TrackingService : Service(), LocationListener {
             route.put(JSONArray().put(location.latitude).put(location.longitude))
         }
         val elapsed = (now - startedAt) / 1000
+        val safeSpeed = if (location.hasSpeed() && location.speed.isFinite()) (location.speed * 3.6f).coerceIn(0f, 25f) else 0f
         prefs.edit().putFloat("live_distance", distance).putLong("live_seconds", elapsed)
+            .putFloat("live_speed_kmh", safeSpeed)
             .putString("route_points", route.toString()).putBoolean("tracking_active", true).apply()
         sendBroadcast(Intent("com.mfit.app.TRACK_UPDATE").setPackage(packageName))
     }
@@ -130,6 +152,7 @@ class TrackingService : Service(), LocationListener {
     }
     override fun onDestroy() {
         try { manager.removeUpdates(this) } catch (_: Exception) {}
+        try { sensorManager.unregisterListener(this) } catch (_: Exception) {}
         try { if (wakeLock?.isHeld == true) wakeLock?.release() } catch (_: Exception) {}
         wakeLock = null
         timerHandler.removeCallbacks(timerTick)
@@ -163,11 +186,15 @@ class TrackingService : Service(), LocationListener {
             } else mutableListOf()
             val activityName = p.getString("active_activity_name", "پیاده‌روی") ?: "پیاده‌روی"
             if (gpsCalories > 0) workoutLog.add("$activityName GPS|${(seconds / 60).coerceAtLeast(1)}|$gpsCalories")
+            val savedSteps = p.getInt("live_steps", 0)
             p.edit().putString("activity_history", history.toString())
+                .putInt("last_activity_steps", savedSteps)
+                .putInt("last_activity_calories", gpsCalories)
+                .putFloat("last_activity_speed_kmh", if (seconds > 0L) (meters / 1000f) / (seconds / 3600f) else 0f)
                 .putString("last_activity", "%.2f".format(Locale.US, meters / 1000f))
                 .putLong("last_activity_seconds", seconds)
                 .putString("workout_log_date", today).putString("workout_log_today", workoutLog.joinToString("\n"))
-                .putFloat("live_distance", 0f).putLong("live_seconds", 0L).putLong("session_started_at", 0L)
+                .putFloat("live_distance", 0f).putLong("live_seconds", 0L).putInt("live_steps", 0).putFloat("live_speed_kmh", 0f).putLong("session_started_at", 0L)
                 .putBoolean("tracking_active", false).putBoolean("session_paused", false).apply()
         } else p.edit().putFloat("live_distance", 0f).putLong("live_seconds", 0L).putLong("session_started_at", 0L).putBoolean("tracking_active", false).apply()
         sendBroadcast(Intent("com.mfit.app.TRACK_UPDATE").setPackage(packageName))
