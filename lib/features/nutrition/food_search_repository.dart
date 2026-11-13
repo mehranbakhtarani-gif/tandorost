@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import 'food_catalog.dart';
 
 /// Searches Open Food Facts for packaged products. Offline Iranian/common-food
@@ -16,10 +17,9 @@ class FoodSearchRepository {
       'page_size': '12',
       'fields': 'code,product_name,product_name_fa,nutriments',
     });
-    final response = await http.get(uri, headers: {
-      'User-Agent': 'MFit/0.2 (food diary lookup)',
-      'Accept': 'application/json',
-    }).timeout(const Duration(seconds: 8));
+    final headers = <String, String>{'Accept': 'application/json'};
+    if (!kIsWeb) headers['User-Agent'] = 'MFit/0.2 (food diary lookup)';
+    final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 8));
     if (response.statusCode != 200) return const [];
     final decoded = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     final products = decoded['products'] as List<dynamic>? ?? const [];
@@ -29,7 +29,11 @@ class FoodSearchRepository {
       final name = (raw['product_name_fa'] ?? raw['product_name'] ?? '').toString().trim();
       final code = (raw['code'] ?? '').toString();
       final n = raw['nutriments'] as Map<String, dynamic>? ?? const {};
-      double number(String key) => (n[key] as num?)?.toDouble() ?? 0;
+      double number(String key) {
+        final value = n[key];
+        if (value is num) return value.toDouble();
+        return double.tryParse(value?.toString() ?? '') ?? 0;
+      }
       var kcal = number('energy-kcal_100g');
       if (kcal <= 0) {
         final kj = number('energy_100g');
