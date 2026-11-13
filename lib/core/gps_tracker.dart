@@ -19,9 +19,12 @@ class GpsTracker extends ChangeNotifier {
   double distanceMeters = 0;
   double speedMps = 0;
   bool isTracking = false;
+  Future<void>? _initializing;
   String status = 'GPS هنوز شروع نشده';
 
-  Future<void> initialize() async {
+  Future<void> initialize() => _initializing ??= _initialize();
+
+  Future<void> _initialize() async {
     if (kIsWeb) {
       status = 'ثبت GPS در نسخه وب پشتیبانی نمی‌شود؛ نسخه Android لازم است';
       notifyListeners();
@@ -33,7 +36,6 @@ class GpsTracker extends ChangeNotifier {
         autoStart: false,
         autoStartOnBoot: false,
         isForegroundMode: true,
-        notificationChannelId: 'mfit_workout_tracking',
         initialNotificationTitle: 'MFit · تمرین فعال',
         initialNotificationContent: 'در انتظار دریافت موقعیت GPS',
         foregroundServiceNotificationId: 731,
@@ -69,6 +71,7 @@ class GpsTracker extends ChangeNotifier {
   }
 
   Future<bool> start() async {
+    await initialize();
     if (kIsWeb) {
       status = 'برای GPS واقعی از نسخه Android استفاده کن';
       notifyListeners();
