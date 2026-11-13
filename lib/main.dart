@@ -557,6 +557,7 @@ class RoutePage extends StatelessWidget {
           decoration: BoxDecoration(color: const Color(0xFFE7EDE2), borderRadius: BorderRadius.circular(27)),
           child: Stack(children: [
             FlutterMap(
+              key: ValueKey(hasFix ? 'gps-map-ready' : 'gps-map-empty'),
               options: MapOptions(initialCenter: center, initialZoom: hasFix ? 16 : 2),
               children: [
                 TileLayer(
