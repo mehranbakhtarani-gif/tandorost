@@ -108,6 +108,6 @@ class FoodEntry {
   const FoodEntry({required this.food, required this.grams, required this.loggedAt});
 
   Map<String, dynamic> toJson() => {
-    'foodId': food.id, 'grams': grams, 'loggedAt': loggedAt.toIso8601String(),
+    'foodId': food.id, 'foodName': food.name, 'kcal': food.kcal, 'protein': food.protein, 'carbs': food.carbs, 'fat': food.fat, 'fiber': food.fiber, 'sourceLabel': food.sourceLabel, 'grams': grams, 'loggedAt': loggedAt.toIso8601String(),
   };
 }
