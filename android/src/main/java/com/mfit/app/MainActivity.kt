@@ -3,6 +3,9 @@ package com.mfit.app
 import android.Manifest
 import android.content.*
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.location.Location
@@ -25,6 +28,7 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.viewinterop.AndroidView
@@ -270,6 +274,25 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
     var coachDataReady by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { context.getSharedPreferences("mfit_native", Context.MODE_PRIVATE) }
+    var profilePhotoUri by remember { mutableStateOf(prefs.getString("profile_photo_uri", null)) }
+    var profilePhotoBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    val profilePhotoPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            try { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            catch (_: SecurityException) { }
+            profilePhotoUri = uri.toString()
+            prefs.edit().putString("profile_photo_uri", profilePhotoUri).apply()
+        }
+    }
+    LaunchedEffect(profilePhotoUri) {
+        profilePhotoBitmap = if (profilePhotoUri.isNullOrBlank()) null else withContext(Dispatchers.IO) {
+            runCatching {
+                context.contentResolver.openInputStream(Uri.parse(profilePhotoUri))?.use { BitmapFactory.decodeStream(it) }
+            }.getOrNull()
+        }
+    }
     // One state/persistence path is shared by Home and Routine water controls.
     val setWaterCount: (Int) -> Unit = { next ->
         val safeCount = next.coerceAtLeast(0)
@@ -326,7 +349,13 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
         Scaffold(
             modifier = Modifier.background(
                 androidx.compose.ui.graphics.Brush.linearGradient(
-                    listOf(Color(0xFFE6F1ED), Color(0xFFF1F8F4), Color(0xFFDCEBE5))
+                    when (tab) {
+                        Tab.HOME -> listOf(Color(0xFFDAE9E2), Color(0xFFEAF2EC), Color(0xFFC9DDD4))
+                        Tab.ACTIVITY -> listOf(Color(0xFFD9E7EA), Color(0xFFEAF0F2), Color(0xFFC8DCE2))
+                        Tab.FOOD -> listOf(Color(0xFFEDE5D5), Color(0xFFF5EFE4), Color(0xFFE1D5C1))
+                        Tab.ROUTINE -> listOf(Color(0xFFE1E4D9), Color(0xFFF0F1E9), Color(0xFFD4DCCB))
+                        Tab.PROFILE -> listOf(Color(0xFFE6EDE9), Color(0xFFF2F5F2), Color(0xFFDCE6E0))
+                    }
                 )
             ),
             containerColor = Color.Transparent,
@@ -361,10 +390,10 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                     targetState = tab,
                     transitionSpec = {
                         if (targetState.ordinal >= initialState.ordinal) {
-                            (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { it / 7 } + fadeIn(tween(240))) togetherWith
+                            (slideInHorizontally(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow)) { it / 10 } + fadeIn(tween(300))) togetherWith
                                 (slideOutHorizontally(animationSpec = tween(170)) { -it / 10 } + fadeOut(tween(130)))
                         } else {
-                            (slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { -it / 7 } + fadeIn(tween(240))) togetherWith
+                            (slideInHorizontally(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow)) { -it / 10 } + fadeIn(tween(300))) togetherWith
                                 (slideOutHorizontally(animationSpec = tween(170)) { it / 10 } + fadeOut(tween(130)))
                         }.using(SizeTransform(clip = false))
                     },
@@ -464,6 +493,30 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                     }
                     Tab.PROFILE -> {
                         SectionTitle("پروفایل", "اطلاعات شخصی و داده‌ها")
+                        Box(Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(24.dp)).padding(18.dp)) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                if (profilePhotoBitmap != null) {
+                                    androidx.compose.foundation.Image(
+                                        bitmap = profilePhotoBitmap!!.asImageBitmap(),
+                                        contentDescription = "عکس پروفایل",
+                                        modifier = Modifier.size(76.dp).clip(CircleShape)
+                                    )
+                                } else {
+                                    Box(Modifier.size(76.dp).clip(CircleShape).background(Color.White.copy(alpha = .22f)).border(1.dp, Color.White.copy(alpha = .5f), CircleShape), contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.Person, contentDescription = null, tint = Ink, modifier = Modifier.size(36.dp))
+                                    }
+                                }
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Text("عکس پروفایل", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Ink)
+                                    Text("یک تصویر از گالری انتخاب کن؛ روی همین دستگاه ذخیره می‌شود.", fontSize = 11.sp, color = Muted)
+                                    OutlinedButton(onClick = { profilePhotoPicker.launch(arrayOf("image/*")) }) {
+                                        Icon(Icons.Default.AddAPhoto, null)
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(if (profilePhotoBitmap == null) "افزودن عکس" else "تغییر عکس")
+                                    }
+                                }
+                            }
+                        }
                         Box(Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(24.dp)).padding(18.dp)) {
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Text("اندازه‌های بدن", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Ink)
