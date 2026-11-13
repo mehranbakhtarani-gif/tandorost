@@ -71,6 +71,8 @@ class MainActivity : ComponentActivity() {
     private var sessionPaused by mutableStateOf(false)
     private var liveDistance by mutableFloatStateOf(0f)
     private var liveSeconds by mutableLongStateOf(0L)
+    private var liveSteps by mutableIntStateOf(0)
+    private var liveSpeedKmh by mutableFloatStateOf(0f)
     private var sessionStartedAt by mutableLongStateOf(0L)
     private var routePoints by mutableStateOf<List<Pair<Double, Double>>>(emptyList())
     private var currentLocation by mutableStateOf<Pair<Double, Double>?>(null)
@@ -109,7 +111,7 @@ class MainActivity : ComponentActivity() {
             ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val filter = IntentFilter("com.mfit.app.TRACK_UPDATE")
         if (Build.VERSION.SDK_INT >= 33) { registerReceiver(receiver, filter, RECEIVER_NOT_EXPORTED) } else { registerReceiver(receiver, filter) }
-        setContent { MFitApp(tracking, sessionPaused, liveDistance, liveSeconds, sessionStartedAt, lastActivity, imported, routePoints, currentLocation, activityHistory,
+        setContent { MFitApp(tracking, sessionPaused, liveDistance, liveSeconds, liveSteps, liveSpeedKmh, sessionStartedAt, lastActivity, imported, routePoints, currentLocation, activityHistory,
             onStart = { requestTracking() }, onPause = { pauseTracking() }, onResume = { resumeTracking() }, onStop = { stopTracking() }, onRequestCurrentLocation = { requestCurrentLocation() },
             onImport = { importLauncher.launch(arrayOf("application/json", "text/*")) },
             weatherPermissionGranted = weatherPermissionGranted,
@@ -118,6 +120,8 @@ class MainActivity : ComponentActivity() {
     private fun refreshTrack() {
         liveDistance = prefs.getFloat("live_distance", 0f)
         liveSeconds = prefs.getLong("live_seconds", 0L)
+        liveSteps = prefs.getInt("live_steps", 0)
+        liveSpeedKmh = prefs.getFloat("live_speed_kmh", 0f)
         sessionStartedAt = prefs.getLong("session_started_at", 0L)
         routePoints = try { val a = JSONArray(prefs.getString("route_points", "[]")); (0 until a.length()).mapNotNull { i -> val p = a.optJSONArray(i); if (p != null && p.length() >= 2) p.getDouble(0) to p.getDouble(1) else null } } catch (_: Exception) { emptyList() }
         tracking = prefs.getBoolean("tracking_active", false)
@@ -127,6 +131,7 @@ class MainActivity : ComponentActivity() {
     }
     private fun requestTracking() {
         val permissions = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+        if (Build.VERSION.SDK_INT >= 29) permissions.add(Manifest.permission.ACTIVITY_RECOGNITION)
         if (Build.VERSION.SDK_INT >= 33) permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         val missing = permissions.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
         if (missing.isEmpty()) startTracking() else permissionLauncher.launch(missing.toTypedArray())
@@ -176,6 +181,7 @@ class MainActivity : ComponentActivity() {
     private fun startTracking() {
         val started = System.currentTimeMillis()
         prefs.edit().putFloat("live_distance", 0f).putLong("live_seconds", 0L)
+            .putInt("live_steps", 0).putFloat("live_speed_kmh", 0f)
             .putLong("session_started_at", started).putString("route_points", "[]")
             .putBoolean("tracking_active", true).putBoolean("session_paused", false).apply()
         refreshTrack()
@@ -351,7 +357,7 @@ private data class DailyWellnessSnapshot(
 private enum class Tab(val label: String) { HOME("خانه"), ACTIVITY("فعالیت"), FOOD("تغذیه"), ROUTINE("روتین"), PROFILE("پروفایل") }
 
 @Composable
-private fun MFitApp(tracking: Boolean, sessionPaused: Boolean, distance: Float, seconds: Long, sessionStartedAt: Long, lastActivity: String, imported: Boolean, routePoints: List<Pair<Double, Double>>, currentLocation: Pair<Double, Double>?, activityHistory: List<String>,
+private fun MFitApp(tracking: Boolean, sessionPaused: Boolean, distance: Float, seconds: Long, steps: Int, speedKmh: Float, sessionStartedAt: Long, lastActivity: String, imported: Boolean, routePoints: List<Pair<Double, Double>>, currentLocation: Pair<Double, Double>?, activityHistory: List<String>,
                     onStart: () -> Unit, onPause: () -> Unit, onResume: () -> Unit, onStop: () -> Unit, onRequestCurrentLocation: () -> Unit, onImport: () -> Unit,
                     weatherPermissionGranted: Boolean, onWeatherPermission: () -> Unit) {
     var tab by remember { mutableStateOf(Tab.HOME) }
@@ -574,7 +580,7 @@ private fun MFitApp(tracking: Boolean, sessionPaused: Boolean, distance: Float, 
                         AchievementPanel(weeklySnapshots, workoutLog.size, habitsDone.count { it })
                     }
                     Tab.ACTIVITY -> {
-                        ActivityPanel(tracking, sessionPaused, distance, shownSeconds, routePoints, currentLocation, activityHistory,
+                        ActivityPanel(tracking, sessionPaused, distance, shownSeconds, steps, speedKmh, routePoints, currentLocation, activityHistory,
                             onStart, onPause, onResume, onStop, onRequestCurrentLocation)
                         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color.White).padding(15.dp)) {
                             Text("آخرین رکورد", color = Color(0xFF254D37), fontSize = 15.sp, fontWeight = FontWeight.Black)
@@ -1201,6 +1207,7 @@ private fun shareMFitActivity(
     distanceMeters: Float,
     seconds: Long,
     calories: Int,
+    steps: Int,
     routePoints: List<Pair<Double, Double>>
 ) {
     val width = 1080
@@ -1286,21 +1293,22 @@ private fun shareMFitActivity(
     val distanceKm = distanceMeters / 1000f
     val duration = "%02d:%02d:%02d".format(seconds / 3600L, (seconds % 3600L) / 60L, seconds % 60L)
     val speed = if (seconds > 0 && distanceKm > 0f) distanceKm / (seconds / 3600f) else 0f
-    val labels = listOf("DISTANCE", "DURATION", "AVG SPEED", "CALORIES")
+    val labels = listOf("DISTANCE", "DURATION", "AVG SPEED", "CALORIES", "STEPS", "PACE")
+    val pace = if (distanceKm > 0f && seconds > 0L) seconds / 60f / distanceKm else 0f
     val values = listOf("%.2f km".format(java.util.Locale.US, distanceKm), duration,
-        "%.1f km/h".format(java.util.Locale.US, speed), "$calories kcal")
+        "%.1f km/h".format(java.util.Locale.US, speed), "$calories kcal", "$steps", if (pace > 0f) "%d:%02d /km".format(pace.toInt(), ((pace % 1f) * 60f).toInt()) else "—")
     val xPositions = listOf(76f, 555f)
-    val yPositions = listOf(900f, 1080f)
+    val yPositions = listOf(860f, 1015f, 1170f)
     var i = 0
     for (y in yPositions) for (x in xPositions) {
-        text(labels[i], x, y, 23f, android.graphics.Color.rgb(172, 204, 180), true)
-        text(values[i], x, y + 72f, 48f, android.graphics.Color.WHITE, true)
+        text(labels[i], x, y, 21f, android.graphics.Color.rgb(172, 204, 180), true)
+        text(values[i], x, y + 58f, 39f, android.graphics.Color.WHITE, true)
         i++
     }
     paint.color = android.graphics.Color.rgb(115, 156, 123)
-    canvas.drawRect(76f, 1190f, 1004f, 1193f, paint)
-    text("MOVE WITH MFIT", 76f, 1255f, 25f, android.graphics.Color.WHITE, true)
-    text("mfit", 900f, 1255f, 25f, android.graphics.Color.rgb(174, 215, 180), true)
+    canvas.drawRect(76f, 1300f, 1004f, 1303f, paint)
+    text("MOVE WITH MFIT", 76f, 1335f, 20f, android.graphics.Color.WHITE, true)
+    text("mfit", 900f, 1335f, 20f, android.graphics.Color.rgb(174, 215, 180), true)
 
     val valuesToSave = ContentValues().apply {
         put(MediaStore.Images.Media.DISPLAY_NAME, "MFIT-Activity-${System.currentTimeMillis()}.jpg")
@@ -1338,7 +1346,7 @@ private fun shareMFitActivity(
 
 @Composable
 private fun ActivityPanel(
-    tracking: Boolean, paused: Boolean, distance: Float, seconds: Long,
+    tracking: Boolean, paused: Boolean, distance: Float, seconds: Long, steps: Int, speedKmh: Float,
     routePoints: List<Pair<Double, Double>>, currentLocation: Pair<Double, Double>?,
     activityHistory: List<String>, onStart: () -> Unit, onPause: () -> Unit,
     onResume: () -> Unit, onStop: () -> Unit, onRequestCurrentLocation: () -> Unit
@@ -1427,9 +1435,9 @@ private fun ActivityPanel(
             Text("%.2f KM".format(java.util.Locale.US, shownDistanceMeters / 1000f), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, color = Color.White, fontSize = 42.sp, fontWeight = FontWeight.Black)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 ActivityStat("مدت", "%02d:%02d".format(shownSeconds / 60, shownSeconds % 60))
+                ActivityStat("قدم", steps.toString())
                 ActivityStat("کالری", estimatedCalories.toString())
-                ActivityStat("سرعت", if (seconds > 0 && distance > 0) "%.1f".format(java.util.Locale.US, shownDistanceMeters / 1000f / (seconds / 3600f)) else "0.0")
-                ActivityStat("ضربان", "—")
+                ActivityStat("سرعت", "%.1f".format(java.util.Locale.US, if (tracking) speedKmh else if (shownSeconds > 0) shownDistanceMeters / 1000f / (shownSeconds / 3600f) else 0f))
             }
             Text("کنترل فعالیت", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -1439,7 +1447,7 @@ private fun ActivityPanel(
                 ActivityControl(Icons.Default.Stop, "توقف", onStop, tracking || paused, Modifier.weight(1f))
                 ActivityControl(Icons.Default.Share, "کارت اشتراک", {
                     runCatching {
-                        shareMFitActivity(context, types[selectedActivity].second, shownDistanceMeters, shownSeconds, estimatedCalories, routePoints)
+                        shareMFitActivity(context, types[selectedActivity].second, shownDistanceMeters, shownSeconds, estimatedCalories, steps, routePoints)
                     }.onFailure {
                         android.widget.Toast.makeText(context, it.message ?: "ساخت کارت اشتراک ناموفق بود", android.widget.Toast.LENGTH_LONG).show()
                     }
@@ -1513,9 +1521,9 @@ private fun ActivityPanel(
         }
         ActivitySectionTitle("خلاصه امروز", "عملکرد روزانه")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActivitySummary(Icons.Default.DirectionsWalk, "—", "قدم", Modifier.weight(1f))
+            ActivitySummary(Icons.Default.DirectionsWalk, steps.toString(), "قدم", Modifier.weight(1f))
             ActivitySummary(Icons.Default.Route, "%.2f".format(java.util.Locale.US, shownDistanceMeters / 1000f), "کیلومتر", Modifier.weight(1f))
-            ActivitySummary(Icons.Default.LocalFireDepartment, "—", "کالری", Modifier.weight(1f))
+            ActivitySummary(Icons.Default.LocalFireDepartment, estimatedCalories.toString(), "کالری", Modifier.weight(1f))
         }
         if (activityHistory.isNotEmpty()) {
             ActivitySectionTitle("سوابق", "آخرین فعالیت‌های ثبت‌شده")
