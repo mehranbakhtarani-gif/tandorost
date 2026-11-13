@@ -1,10 +1,10 @@
-import 'dart:ui' show FontFeature;
+import 'dart:ui' show FontFeature, Path;
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/session_engine.dart';
 import 'core/gps_tracker.dart';
-import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map/flutter_map.dart' hide Path;
 import 'package:latlong2/latlong.dart';
 import 'features/nutrition/food_catalog.dart';
 import 'features/nutrition/food_diary.dart';
@@ -195,7 +195,7 @@ class HomePage extends StatelessWidget {
           boxShadow: [BoxShadow(color: green.withOpacity(.18), blurRadius: 20, offset: const Offset(0, 9))],
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [const Expanded(child: Text('YOUR DAILY EDGE', style: TextStyle(color: lime, fontSize: 10, letterSpacing: 1.7, fontWeight: FontWeight.w900)), _tag('KEEP MOVING')]),
+          Row(children: [const Expanded(child: Text('YOUR DAILY EDGE', style: TextStyle(color: lime, fontSize: 10, letterSpacing: 1.7, fontWeight: FontWeight.w900))), _tag('KEEP MOVING')]),
           const SizedBox(height: 17),
           const Text('Push your\nlimits.', style: TextStyle(color: Colors.white, fontSize: 35, height: 1.02, fontWeight: FontWeight.w900, letterSpacing: -1)),
           const SizedBox(height: 9),
@@ -256,7 +256,7 @@ class ActivityPage extends StatelessWidget {
       Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Container(
         padding: const EdgeInsets.all(22), decoration: BoxDecoration(color: green, borderRadius: BorderRadius.circular(28)),
         child: Column(children: [
-          Row(children: [const Expanded(child: Text('LIVE WORKOUT', style: TextStyle(color: lime, letterSpacing: 1.5, fontSize: 10, fontWeight: FontWeight.w900)), _tag(session.isActive ? 'LIVE' : 'READY')]),
+          Row(children: [const Expanded(child: Text('LIVE WORKOUT', style: TextStyle(color: lime, letterSpacing: 1.5, fontSize: 10, fontWeight: FontWeight.w900))), _tag(session.isActive ? 'LIVE' : 'READY')]),
           const SizedBox(height: 23),
           Text(session.formatted, style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.w300, letterSpacing: 2, fontFeatures: [FontFeature.tabularFigures()])),
           const SizedBox(height: 7),
