@@ -62,7 +62,7 @@ class _MFitShellState extends State<MFitShell> {
   }
 
   Future<void> _setWater(int value) async {
-    setState(() => water = value.clamp(0, 16));
+    setState(() => water = value.clamp(0, 16).toInt());
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('mfit.water.today', water);
   }
@@ -207,7 +207,7 @@ class HomePage extends StatelessWidget {
       Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Row(children: [
         const Expanded(child: MetricTile(icon: Icons.directions_walk_rounded, label: 'قدم‌ها', value: '—', unit: 'اتصال حسگر در مرحله بعد', accent: green)),
         const SizedBox(width: 9),
-        Expanded(child: MetricTile(icon: Icons.local_fire_department_rounded, label: 'کالری غذا', value: '—', unit: 'از ثبت تغذیه', accent: Color(0xFFEA914A))),
+        Expanded(child: MetricTile(icon: Icons.local_fire_department_rounded, label: 'کالری غذا', value: kcal.round().toString(), unit: 'kcal ثبت‌شده', accent: Color(0xFFEA914A))),
         const SizedBox(width: 9),
         Expanded(child: AnimatedBuilder(animation: session, builder: (_, __) => MetricTile(icon: Icons.timer_outlined, label: 'تمرین', value: session.formatted.substring(0, 5), unit: 'زمان جلسه', accent: const Color(0xFF4E8CC7)))),
       ])),
