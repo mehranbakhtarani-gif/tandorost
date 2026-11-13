@@ -1048,7 +1048,14 @@ private fun ActivityPanel(
     }
     LaunchedEffect(selectedActivity) { activityPrefs.edit().putString("active_activity_name", types[selectedActivity].second).apply() }
     val weightKg = activityPrefs.getString("weight", "70")?.replace(",", ".")?.toFloatOrNull()?.coerceIn(30f, 250f) ?: 70f
-    val estimatedCalories = (weightKg * (distance / 1000f) * .7f).toInt().coerceAtLeast(0)
+    val estimatedCalories = (weightKg * (shownDistanceMeters / 1000f) * .7f).toInt().coerceAtLeast(0)
+    val lastSummary = activityHistory.firstOrNull()?.substringAfter("|", "") ?: ""
+    val lastDistanceKm = Regex("""([0-9]+(?:\\.[0-9]+)?)\\s*km""").find(lastSummary)?.groupValues?.get(1)?.toFloatOrNull() ?: 0f
+    val lastTime = Regex("""([0-9]+):([0-9]{2})""").find(lastSummary)
+    val completedSeconds = if (lastTime != null) (lastTime.groupValues[1].toLongOrNull() ?: 0L) * 60L + (lastTime.groupValues[2].toLongOrNull() ?: 0L) else 0L
+    val sessionInProgress = tracking || paused || seconds > 0L || distance > 0f
+    val shownDistanceMeters = if (sessionInProgress) distance else lastDistanceKm * 1000f
+    val shownSeconds = if (sessionInProgress) seconds else completedSeconds
     val pulse by rememberInfiniteTransition(label = "live-dot").animateFloat(.25f, 1f,
         infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "live-dot-alpha")
     val mapView = remember {
@@ -1110,11 +1117,11 @@ private fun ActivityPanel(
                     Text("مسافت پیموده‌شده", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
             }
-            Text("%.2f KM".format(java.util.Locale.US, distance / 1000f), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, color = Color.White, fontSize = 42.sp, fontWeight = FontWeight.Black)
+            Text("%.2f KM".format(java.util.Locale.US, shownDistanceMeters / 1000f), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, color = Color.White, fontSize = 42.sp, fontWeight = FontWeight.Black)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                ActivityStat("مدت", "%02d:%02d".format(seconds / 60, seconds % 60))
+                ActivityStat("مدت", "%02d:%02d".format(shownSeconds / 60, shownSeconds % 60))
                 ActivityStat("کالری", estimatedCalories.toString())
-                ActivityStat("سرعت", if (seconds > 0 && distance > 0) "%.1f".format(java.util.Locale.US, distance / 1000f / (seconds / 3600f)) else "0.0")
+                ActivityStat("سرعت", if (seconds > 0 && distance > 0) "%.1f".format(java.util.Locale.US, shownDistanceMeters / 1000f / (seconds / 3600f)) else "0.0")
                 ActivityStat("ضربان", "—")
             }
             Text("کنترل فعالیت", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -1124,7 +1131,7 @@ private fun ActivityPanel(
                 ActivityControl(Icons.Default.PlayCircleOutline, "ادامه", onResume, paused, Modifier.weight(1f))
                 ActivityControl(Icons.Default.Stop, "توقف", onStop, tracking || paused, Modifier.weight(1f))
                 ActivityControl(Icons.Default.Share, "اشتراک", {
-                    val text = "گزارش فعالیت MFit\nنوع فعالیت: ${types[selectedActivity].second}\nمدت: %02d:%02d\nمسافت: %.2f کیلومتر".format(seconds / 60, seconds % 60, distance / 1000f)
+                    val text = "گزارش فعالیت MFit\nنوع فعالیت: ${types[selectedActivity].second}\nمدت: %02d:%02d\nمسافت: %.2f کیلومتر".format(shownSeconds / 60, shownSeconds % 60, shownDistanceMeters / 1000f)
                     val send = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text) }
                     context.startActivity(Intent.createChooser(send, "اشتراک‌گذاری فعالیت"))
                 }, true, Modifier.weight(1f))
@@ -1154,7 +1161,7 @@ private fun ActivityPanel(
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("مسیر فعالیت", color = Color(0xFF254631), fontSize = 17.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
-            Text("%.2f KM".format(java.util.Locale.US, distance / 1000f), color = Color(0xFF254631), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text("%.2f KM".format(java.util.Locale.US, shownDistanceMeters / 1000f), color = Color(0xFF254631), fontSize = 11.sp, fontWeight = FontWeight.Bold)
         }
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color.White).padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(Modifier.fillMaxWidth().clip(CircleShape).background(Color(0xFFEEF2EC)).padding(3.dp)) {
@@ -1197,7 +1204,7 @@ private fun ActivityPanel(
         ActivitySectionTitle("خلاصه امروز", "عملکرد روزانه")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ActivitySummary(Icons.Default.DirectionsWalk, "—", "قدم", Modifier.weight(1f))
-            ActivitySummary(Icons.Default.Route, "%.2f".format(java.util.Locale.US, distance / 1000f), "کیلومتر", Modifier.weight(1f))
+            ActivitySummary(Icons.Default.Route, "%.2f".format(java.util.Locale.US, shownDistanceMeters / 1000f), "کیلومتر", Modifier.weight(1f))
             ActivitySummary(Icons.Default.LocalFireDepartment, "—", "کالری", Modifier.weight(1f))
         }
         if (activityHistory.isNotEmpty()) {
