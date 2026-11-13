@@ -1,4 +1,4 @@
-name: Build MFit Android
+name: Build and Publish MFit Android
 on:
   push:
     branches: [main, feat/mfit-native-next-release]
@@ -9,12 +9,14 @@ on:
       - ".github/workflows/android.yml"
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -24,9 +26,23 @@ jobs:
           gradle-version: "8.9"
       - name: Assemble debug APK
         run: gradle --no-daemon :android:assembleDebug
-      - name: Upload APK
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: mfit-android-debug
           path: android/build/outputs/apk/debug/android-debug.apk
           if-no-files-found: error
+      - name: Publish latest development APK
+        if: github.ref == 'refs/heads/feat/mfit-native-next-release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          APK="android/build/outputs/apk/debug/android-debug.apk"
+          sha256sum "$APK" > "$APK.sha256"
+          gh release delete mfit-latest --yes --cleanup-tag || true
+          gh release create mfit-latest "$APK" "$APK.sha256" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "MFit — آخرین نسخه آزمایشی" \
+            --notes "این نسخه به‌صورت خودکار از آخرین کامیت شاخه feat/mfit-native-next-release ساخته شده است. Commit: $GITHUB_SHA" \
+            --prerelease
