@@ -1370,7 +1370,9 @@ private fun ActivityPanel(
     val sessionInProgress = tracking || paused || seconds > 0L || distance > 0f
     val shownDistanceMeters = if (sessionInProgress) distance else lastDistanceKm * 1000f
     val shownSeconds = if (sessionInProgress) seconds else completedSeconds
-    val estimatedCalories = (weightKg * (shownDistanceMeters / 1000f) * .7f).toInt().coerceAtLeast(0)
+    val shownSteps = if (sessionInProgress) steps else activityPrefs.getInt("last_activity_steps", 0)
+    val estimatedCalories = if (sessionInProgress) (weightKg * (shownDistanceMeters / 1000f) * .7f).toInt().coerceAtLeast(0)
+        else activityPrefs.getInt("last_activity_calories", 0)
     val pulse by rememberInfiniteTransition(label = "live-dot").animateFloat(.25f, 1f,
         infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "live-dot-alpha")
     val mapView = remember {
@@ -1435,9 +1437,9 @@ private fun ActivityPanel(
             Text("%.2f KM".format(java.util.Locale.US, shownDistanceMeters / 1000f), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, color = Color.White, fontSize = 42.sp, fontWeight = FontWeight.Black)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 ActivityStat("مدت", "%02d:%02d".format(shownSeconds / 60, shownSeconds % 60))
-                ActivityStat("قدم", steps.toString())
+                ActivityStat("قدم", shownSteps.toString())
                 ActivityStat("کالری", estimatedCalories.toString())
-                ActivityStat("سرعت", "%.1f".format(java.util.Locale.US, if (tracking) speedKmh else if (shownSeconds > 0) shownDistanceMeters / 1000f / (shownSeconds / 3600f) else 0f))
+                ActivityStat("سرعت", "%.1f".format(java.util.Locale.US, if (tracking && speedKmh > .2f) speedKmh else if (shownSeconds > 0) shownDistanceMeters / 1000f / (shownSeconds / 3600f) else 0f))
             }
             Text("کنترل فعالیت", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -1447,7 +1449,7 @@ private fun ActivityPanel(
                 ActivityControl(Icons.Default.Stop, "توقف", onStop, tracking || paused, Modifier.weight(1f))
                 ActivityControl(Icons.Default.Share, "کارت اشتراک", {
                     runCatching {
-                        shareMFitActivity(context, types[selectedActivity].second, shownDistanceMeters, shownSeconds, estimatedCalories, steps, routePoints)
+                        shareMFitActivity(context, types[selectedActivity].second, shownDistanceMeters, shownSeconds, estimatedCalories, shownSteps, routePoints)
                     }.onFailure {
                         android.widget.Toast.makeText(context, it.message ?: "ساخت کارت اشتراک ناموفق بود", android.widget.Toast.LENGTH_LONG).show()
                     }
@@ -1521,7 +1523,7 @@ private fun ActivityPanel(
         }
         ActivitySectionTitle("خلاصه امروز", "عملکرد روزانه")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActivitySummary(Icons.Default.DirectionsWalk, steps.toString(), "قدم", Modifier.weight(1f))
+            ActivitySummary(Icons.Default.DirectionsWalk, shownSteps.toString(), "قدم", Modifier.weight(1f))
             ActivitySummary(Icons.Default.Route, "%.2f".format(java.util.Locale.US, shownDistanceMeters / 1000f), "کیلومتر", Modifier.weight(1f))
             ActivitySummary(Icons.Default.LocalFireDepartment, estimatedCalories.toString(), "کالری", Modifier.weight(1f))
         }
