@@ -2,6 +2,9 @@ import 'dart:ui' show FontFeature;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/session_engine.dart';
+import 'core/gps_tracker.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'features/nutrition/food_catalog.dart';
 import 'features/nutrition/food_diary.dart';
 import 'features/progress/progress_log.dart';
@@ -39,6 +42,7 @@ class MFitShell extends StatefulWidget {
 
 class _MFitShellState extends State<MFitShell> {
   final session = SessionEngine();
+  final gps = GpsTracker();
   final diary = FoodDiary();
   final progress = ProgressLog();
   int tab = 0, water = 0;
@@ -47,7 +51,7 @@ class _MFitShellState extends State<MFitShell> {
   List<ProgressEntry> progressEntries = [];
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() { super.initState(); _load(); gps.initialize(); }
 
   Future<void> _load() async {
     await session.restore();
@@ -68,7 +72,7 @@ class _MFitShellState extends State<MFitShell> {
   }
 
   @override
-  void dispose() { session.dispose(); super.dispose(); }
+  void dispose() { session.dispose(); gps.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -86,9 +90,9 @@ class _MFitShellState extends State<MFitShell> {
   Widget _page() {
     if (!ready) return const Center(child: CircularProgressIndicator(color: green));
     switch (tab) {
-      case 1: return ActivityPage(session: session);
+      case 1: return ActivityPage(session: session, gps: gps);
       case 2: return NutritionPage(diary: diary, entries: foodEntries, water: water, onWater: _setWater, onChanged: (v) => setState(() => foodEntries = v));
-      case 3: return const RoutePage();
+      case 3: return RoutePage(tracker: gps);
       case 4: return ProgressPage(log: progress, entries: progressEntries, onChanged: (v) => setState(() => progressEntries = v));
       default: return HomePage(session: session, foods: foodEntries,
         onActivity: () => setState(() => tab = 1),
@@ -240,7 +244,8 @@ class HomePage extends StatelessWidget {
 
 class ActivityPage extends StatelessWidget {
   final SessionEngine session;
-  const ActivityPage({super.key, required this.session});
+  final GpsTracker gps;
+  const ActivityPage({super.key, required this.session, required this.gps});
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: session,
@@ -256,9 +261,9 @@ class ActivityPage extends StatelessWidget {
           const Text('مدت زمان جلسه تمرین', style: TextStyle(color: Colors.white70, fontSize: 11)),
           const SizedBox(height: 24),
           Row(children: [
-            Expanded(child: FilledButton.icon(onPressed: session.isActive ? session.pause : session.start, icon: Icon(session.isActive ? Icons.pause_rounded : Icons.play_arrow_rounded), label: Text(session.isActive ? 'توقف موقت' : 'شروع تمرین'), style: FilledButton.styleFrom(backgroundColor: lime, foregroundColor: ink, padding: const EdgeInsets.symmetric(vertical: 14)))),
+            Expanded(child: FilledButton.icon(onPressed: () async { if (session.isActive) { await session.pause(); await gps.stop(); } else { await session.start(); await gps.start(); } }, icon: Icon(session.isActive ? Icons.pause_rounded : Icons.play_arrow_rounded), label: Text(session.isActive ? 'توقف موقت' : 'شروع تمرین'), style: FilledButton.styleFrom(backgroundColor: lime, foregroundColor: ink, padding: const EdgeInsets.symmetric(vertical: 14)))),
             const SizedBox(width: 10),
-            IconButton.filledTonal(onPressed: session.reset, icon: const Icon(Icons.restart_alt_rounded), style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(.15), foregroundColor: Colors.white)),
+            IconButton.filledTonal(onPressed: () async { await session.reset(); await gps.stop(); }, icon: const Icon(Icons.restart_alt_rounded), style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(.15), foregroundColor: Colors.white)),
           ]),
         ]),
       )),
@@ -509,31 +514,78 @@ class _ProgressPageState extends State<ProgressPage> {
 }
 
 class RoutePage extends StatelessWidget {
-  const RoutePage({super.key});
+  final GpsTracker tracker;
+  const RoutePage({super.key, required this.tracker});
+
   @override
-  Widget build(BuildContext context) => ListView(padding: const EdgeInsets.only(bottom: 24), children: [
-    const PageHeader('EXPLORE YOUR ROUTE', 'نقشه و مسیر'),
-    Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Container(
-      height: 430, clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(color: const Color(0xFFE7EDE2), borderRadius: BorderRadius.circular(27)),
-      child: Stack(children: [
-        Positioned.fill(child: CustomPaint(painter: RoutePainter())),
-        Positioned(right: 16, top: 16, child: _tag('ROUTE PREVIEW', dark: true)),
-        Positioned(right: 17, left: 17, bottom: 17, child: Container(
-          padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white.withOpacity(.96), borderRadius: BorderRadius.circular(19)),
-          child: const Row(children: [
-            Icon(Icons.route_rounded, color: green, size: 26), SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('مسیر فعالیت', style: TextStyle(color: ink, fontWeight: FontWeight.w900)),
-              Text('نمونه نمایشی · بدون داده GPS', style: TextStyle(color: muted, fontSize: 10)),
-            ])),
-            Icon(Icons.lock_clock_rounded, color: muted),
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: tracker,
+    builder: (_, __) {
+      final points = tracker.route;
+      final hasFix = points.isNotEmpty;
+      final center = hasFix ? points.last : const LatLng(0, 0);
+      return ListView(padding: const EdgeInsets.only(bottom: 24), children: [
+        const PageHeader('REAL GPS TRACKING', 'نقشه و مسیر'),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Container(
+          height: 440, clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(color: const Color(0xFFE7EDE2), borderRadius: BorderRadius.circular(27)),
+          child: Stack(children: [
+            FlutterMap(
+              options: MapOptions(initialCenter: center, initialZoom: hasFix ? 16 : 2),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.mfit.app',
+                  maxZoom: 19,
+                ),
+                if (points.length > 1) PolylineLayer(polylines: [
+                  Polyline(points: points, strokeWidth: 5, color: const Color(0xFF254D37)),
+                ]),
+                if (hasFix) MarkerLayer(markers: [
+                  Marker(point: points.first, width: 24, height: 24, child: const Icon(Icons.flag_circle, color: Color(0xFF254D37), size: 25)),
+                  Marker(point: points.last, width: 30, height: 30, child: const Icon(Icons.my_location, color: Color(0xFFB9EF45), size: 28)),
+                ]),
+                RichAttributionWidget(attributions: [
+                  TextSourceAttribution('© OpenStreetMap contributors'),
+                ]),
+              ],
+            ),
+            Positioned(right: 14, top: 14, child: _tag(tracker.isTracking ? 'GPS LIVE' : 'GPS MAP', dark: true)),
+            if (!hasFix) Positioned.fill(child: IgnorePointer(child: Container(
+              color: Colors.white.withOpacity(.35),
+              child: Center(child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: Colors.white.withOpacity(.94), borderRadius: BorderRadius.circular(18)),
+                child: const Text('برای نمایش مسیر، یک تمرین GPS را شروع کن', style: TextStyle(color: ink, fontWeight: FontWeight.w800, fontSize: 12)),
+              )),
+            ))),
           ]),
         )),
-      ]),
-    )),
-    const Padding(padding: EdgeInsets.fromLTRB(22, 14, 22, 0), child: Text('اتصال GPS واقعی، ثبت پس‌زمینه و مسیر روی نقشه در مرحله سرویس اندروید فعال می‌شود.', style: TextStyle(color: muted, fontSize: 11, height: 1.5))),
-  ]);
+        const SizedBox(height: 15),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Row(children: [
+          Expanded(child: MetricTile(icon: Icons.route_rounded, label: 'مسافت', value: tracker.distanceLabel, unit: 'کیلومتر', accent: green)),
+          const SizedBox(width: 9),
+          Expanded(child: MetricTile(icon: Icons.speed_rounded, label: 'سرعت', value: (tracker.speedMps * 3.6).toStringAsFixed(1), unit: 'km/h', accent: const Color(0xFF4E8CC7))),
+          const SizedBox(width: 9),
+          Expanded(child: MetricTile(icon: Icons.timer_outlined, label: 'Pace', value: tracker.paceLabel, unit: 'دقیقه / km', accent: const Color(0xFFEA914A))),
+        ])),
+        Padding(padding: const EdgeInsets.fromLTRB(18, 15, 18, 0), child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(19)),
+          child: Row(children: [
+            Icon(tracker.isTracking ? Icons.gps_fixed : Icons.gps_not_fixed, color: tracker.isTracking ? green : muted),
+            const SizedBox(width: 10),
+            Expanded(child: Text(tracker.status, style: const TextStyle(color: ink, fontSize: 11, fontWeight: FontWeight.w700))),
+            if (tracker.isTracking)
+              FilledButton(onPressed: tracker.stop, style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFE5E0), foregroundColor: const Color(0xFF9D3425)), child: const Text('پایان'))
+            else
+              FilledButton(onPressed: tracker.start, style: FilledButton.styleFrom(backgroundColor: lime, foregroundColor: ink), child: const Text('شروع GPS')),
+          ]),
+        )),
+        const Padding(padding: EdgeInsets.fromLTRB(22, 12, 22, 0), child: Text('ثبت مسیر از GPS گوشی انجام می‌شود و در زمان فعال بودن سرویس Foreground اندروید می‌تواند با خاموش شدن صفحه ادامه یابد. برای این قابلیت، مجوز «همیشه مجاز» و اعلان‌ها باید فعال باشند.', style: TextStyle(color: muted, fontSize: 10, height: 1.5))),
+      ]);
+    },
+  );
 }
 
 class SectionLabel extends StatelessWidget {
