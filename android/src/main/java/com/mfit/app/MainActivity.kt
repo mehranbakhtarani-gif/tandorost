@@ -56,6 +56,7 @@ private val Muted = MFitPalette.Muted
 class MainActivity : ComponentActivity() {
     private val prefs by lazy { getSharedPreferences("mfit_native", MODE_PRIVATE) }
     private var tracking by mutableStateOf(false)
+    private var sessionPaused by mutableStateOf(false)
     private var liveDistance by mutableFloatStateOf(0f)
     private var liveSeconds by mutableLongStateOf(0L)
     private var sessionStartedAt by mutableLongStateOf(0L)
@@ -96,8 +97,8 @@ class MainActivity : ComponentActivity() {
             ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val filter = IntentFilter("com.mfit.app.TRACK_UPDATE")
         if (Build.VERSION.SDK_INT >= 33) { registerReceiver(receiver, filter, RECEIVER_NOT_EXPORTED) } else { registerReceiver(receiver, filter) }
-        setContent { MFitApp(tracking, liveDistance, liveSeconds, sessionStartedAt, lastActivity, imported, routePoints, currentLocation, activityHistory,
-            onStart = { requestTracking() }, onStop = { stopTracking() }, onRequestCurrentLocation = { requestCurrentLocation() },
+        setContent { MFitApp(tracking, sessionPaused, liveDistance, liveSeconds, sessionStartedAt, lastActivity, imported, routePoints, currentLocation, activityHistory,
+            onStart = { requestTracking() }, onPause = { pauseTracking() }, onResume = { resumeTracking() }, onStop = { stopTracking() }, onRequestCurrentLocation = { requestCurrentLocation() },
             onImport = { importLauncher.launch(arrayOf("application/json", "text/*")) },
             weatherPermissionGranted = weatherPermissionGranted,
             onWeatherPermission = { weatherPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }) }
@@ -108,6 +109,7 @@ class MainActivity : ComponentActivity() {
         sessionStartedAt = prefs.getLong("session_started_at", 0L)
         routePoints = try { val a = JSONArray(prefs.getString("route_points", "[]")); (0 until a.length()).mapNotNull { i -> val p = a.optJSONArray(i); if (p != null && p.length() >= 2) p.getDouble(0) to p.getDouble(1) else null } } catch (_: Exception) { emptyList() }
         tracking = prefs.getBoolean("tracking_active", false)
+        sessionPaused = prefs.getBoolean("session_paused", false)
         activityHistory = try { val a = JSONArray(prefs.getString("activity_history", "[]")); (0 until a.length()).mapNotNull { i -> a.optString(i).takeIf { it.isNotBlank() } } } catch (_: Exception) { emptyList() }
         lastActivity = prefs.getString("last_activity", "—") ?: "—"
     }
@@ -159,8 +161,46 @@ class MainActivity : ComponentActivity() {
             // Keep a previously available last-known location visible if a fresh fix is unavailable.
         }
     }
-    private fun startTracking() { val started = System.currentTimeMillis(); prefs.edit().putFloat("live_distance", 0f).putLong("live_seconds", 0L).putLong("session_started_at", started).putString("route_points", "[]").putBoolean("tracking_active", true).apply(); refreshTrack(); ContextCompat.startForegroundService(this, Intent(this, TrackingService::class.java)); tracking = true }
-    private fun stopTracking() { stopService(Intent(this, TrackingService::class.java)); tracking = false; prefs.edit().putBoolean("tracking_active", false).apply(); refreshTrack() }
+    private fun startTracking() {
+        val started = System.currentTimeMillis()
+        prefs.edit().putFloat("live_distance", 0f).putLong("live_seconds", 0L)
+            .putLong("session_started_at", started).putString("route_points", "[]")
+            .putBoolean("tracking_active", true).putBoolean("session_paused", false).apply()
+        refreshTrack()
+        ContextCompat.startForegroundService(this, Intent(this, TrackingService::class.java))
+        tracking = true
+        sessionPaused = false
+    }
+    private fun pauseTracking() {
+        if (!tracking) return
+        ContextCompat.startForegroundService(this, Intent(this, TrackingService::class.java).setAction("PAUSE"))
+        tracking = false
+        sessionPaused = true
+        prefs.edit().putBoolean("session_paused", true).putBoolean("tracking_active", false).apply()
+        refreshTrack()
+    }
+    private fun resumeTracking() {
+        if (!sessionPaused) return
+        val now = System.currentTimeMillis()
+        val elapsed = prefs.getLong("live_seconds", 0L)
+        prefs.edit().putLong("session_started_at", now - elapsed * 1000L)
+            .putBoolean("tracking_active", true).putBoolean("session_paused", false).apply()
+        ContextCompat.startForegroundService(this, Intent(this, TrackingService::class.java))
+        tracking = true
+        sessionPaused = false
+        refreshTrack()
+    }
+    private fun stopTracking() {
+        if (tracking) {
+            stopService(Intent(this, TrackingService::class.java))
+        } else if (sessionPaused) {
+            ContextCompat.startForegroundService(this, Intent(this, TrackingService::class.java).setAction("FINISH"))
+        }
+        tracking = false
+        sessionPaused = false
+        prefs.edit().putBoolean("tracking_active", false).putBoolean("session_paused", false).apply()
+        refreshTrack()
+    }
     override fun onDestroy() {
         currentLocationListener?.let { listener -> runCatching { (getSystemService(LOCATION_SERVICE) as LocationManager).removeUpdates(listener) } }
         currentLocationListener = null
@@ -299,8 +339,8 @@ private data class DailyWellnessSnapshot(
 private enum class Tab(val label: String) { HOME("خانه"), ACTIVITY("فعالیت"), FOOD("تغذیه"), ROUTINE("روتین"), PROFILE("پروفایل") }
 
 @Composable
-private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionStartedAt: Long, lastActivity: String, imported: Boolean, routePoints: List<Pair<Double, Double>>, currentLocation: Pair<Double, Double>?, activityHistory: List<String>,
-                    onStart: () -> Unit, onStop: () -> Unit, onRequestCurrentLocation: () -> Unit, onImport: () -> Unit,
+private fun MFitApp(tracking: Boolean, sessionPaused: Boolean, distance: Float, seconds: Long, sessionStartedAt: Long, lastActivity: String, imported: Boolean, routePoints: List<Pair<Double, Double>>, currentLocation: Pair<Double, Double>?, activityHistory: List<String>,
+                    onStart: () -> Unit, onPause: () -> Unit, onResume: () -> Unit, onStop: () -> Unit, onRequestCurrentLocation: () -> Unit, onImport: () -> Unit,
                     weatherPermissionGranted: Boolean, onWeatherPermission: () -> Unit) {
     var tab by remember { mutableStateOf(Tab.HOME) }
     var displaySeconds by remember { mutableLongStateOf(seconds) }
@@ -404,8 +444,8 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
             modifier = Modifier.background(
                 androidx.compose.ui.graphics.Brush.linearGradient(
                     when (tab) {
-                        Tab.HOME -> listOf(Color(0xFF0D1819), Color(0xFF142829), Color(0xFF1C3536))
-                        Tab.ACTIVITY -> listOf(Color(0xFF0D1819), Color(0xFF17262D), Color(0xFF24383E))
+                        Tab.HOME -> listOf(Color(0xFFE9EEE7), Color(0xFFE9EEE7), Color(0xFFE9EEE7))
+                        Tab.ACTIVITY -> listOf(Color(0xFFE9EEE7), Color(0xFFE9EEE7), Color(0xFFE9EEE7))
                         Tab.FOOD -> listOf(Color(0xFF0D1819), Color(0xFF211B2B), Color(0xFF342A46))
                         Tab.ROUTINE -> listOf(Color(0xFF0D1819), Color(0xFF18302C), Color(0xFF24423A))
                         Tab.PROFILE -> listOf(Color(0xFF0D1819), Color(0xFF1B2730), Color(0xFF26363C))
@@ -420,24 +460,46 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                     .padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(top = 28.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text("T A N D O R O S T  /  WELLNESS", fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp, color = Lime)
-                        if (tab == Tab.HOME) Text(java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("EEEE, dd MMM", java.util.Locale.ENGLISH)).uppercase(), fontSize = 9.sp, letterSpacing = 1.6.sp, color = Muted)
-                        Text(when(tab) {
-                            Tab.HOME -> "روزت را زندگی کن."
-                            Tab.ACTIVITY -> "وقت حرکته."
-                            Tab.FOOD -> "سوخت بدنت."
-                            Tab.ROUTINE -> "عادت‌های کوچک، نتیجه‌های بزرگ."
-                            Tab.PROFILE -> "مسیر پیشرفت تو."
-                        }, fontSize = if (tab == Tab.HOME) 29.sp else 25.sp, fontWeight = FontWeight.ExtraBold, color = Ink, lineHeight = 36.sp)
+                if (tab == Tab.HOME || tab == Tab.ACTIVITY) {
+                    Row(Modifier.fillMaxWidth().padding(top = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(40.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF245C3B)), contentAlignment = Alignment.Center) {
+                            Text("m", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Text("MFit", color = Color(0xFF234D35), fontSize = 20.sp, fontWeight = FontWeight.Black)
+                            Text("حرکت، سلامتی، پیشرفت", color = Color(0xFF718174), fontSize = 10.sp)
+                        }
+                        Box(Modifier.size(38.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Person, null, tint = Color(0xFF315A40))
+                        }
                     }
-                    Box(Modifier.size(44.dp).clip(CircleShape).background(Color(0xFF31594D).copy(alpha = .34f)).border(1.dp, Color.White.copy(alpha = .24f), CircleShape), contentAlignment = Alignment.Center) {
-                        Text("T", fontWeight = FontWeight.Black, fontSize = 21.sp, color = Ink)
+                    if (tab == Tab.HOME) {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("خانه", color = Color(0xFF203E2C), fontSize = 27.sp, fontWeight = FontWeight.Black)
+                            Text("روزت را با انرژی بساز", color = Color(0xFF728174), fontSize = 11.sp)
+                        }
+                    }
+                } else {
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 28.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("M F I T  /  WELLNESS", fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp, color = Lime)
+                            if (tab == Tab.HOME) Text(java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("EEEE, dd MMM", java.util.Locale.ENGLISH)).uppercase(), fontSize = 9.sp, letterSpacing = 1.6.sp, color = Muted)
+                            Text(when(tab) {
+                                Tab.HOME -> "روزت را زندگی کن."
+                                Tab.ACTIVITY -> "وقت حرکته."
+                                Tab.FOOD -> "سوخت بدنت."
+                                Tab.ROUTINE -> "عادت‌های کوچک، نتیجه‌های بزرگ."
+                                Tab.PROFILE -> "مسیر پیشرفت تو."
+                            }, fontSize = if (tab == Tab.HOME) 29.sp else 25.sp, fontWeight = FontWeight.ExtraBold, color = Ink, lineHeight = 36.sp)
+                        }
+                        Box(Modifier.size(44.dp).clip(CircleShape).background(Color(0xFF31594D).copy(alpha = .34f)).border(1.dp, Color.White.copy(alpha = .24f), CircleShape), contentAlignment = Alignment.Center) {
+                            Text("M", fontWeight = FontWeight.Black, fontSize = 21.sp, color = Ink)
+                        }
                     }
                 }
                 AnimatedContent(
@@ -456,23 +518,49 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                     when(page) {
                     Tab.HOME -> {
-                        HomeHero(tracking, distance, shownSeconds, onStart = { tab = Tab.ACTIVITY; onStart() })
-                        WeatherPanel(weatherPermissionGranted, onWeatherPermission)
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            DashboardStat("آب امروز", water.toString(), "لیوان", Icons.Default.WaterDrop, Modifier.weight(1f))
-                            DashboardStat("آخرین فعالیت", if(lastActivity == "—") "—" else lastActivity, "کیلومتر", Icons.Default.DirectionsRun, Modifier.weight(1f))
+                        FastingPanel(prefs)
+                        val todayKcal = mealLog.sumOf { it.split(" • ").getOrNull(2)?.removeSuffix(" kcal")?.toDoubleOrNull() ?: 0.0 }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Stretch) {
+                            Column(Modifier.weight(1.7f).clip(RoundedCornerShape(topStart = 27.dp, topEnd = 27.dp, bottomStart = 27.dp, bottomEnd = 8.dp))
+                                .background(Lime).clickable { tab = Tab.ACTIVITY }.padding(17.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                Icon(Icons.Default.DirectionsRun, null, tint = Color(0xFF17221C), modifier = Modifier.size(25.dp))
+                                Spacer(Modifier.height(4.dp))
+                                Text("حرکت امروز", color = Color(0xFF17221C), fontSize = 17.sp, fontWeight = FontWeight.Black)
+                                Text("شروع فعالیت و ثبت مسیر", color = Color(0xFF43572A), fontSize = 10.sp)
+                                Row(verticalAlignment = Alignment.CenterVertically) { Text("شروع کن", color = Color(0xFF17221C), fontSize = 11.sp, fontWeight = FontWeight.Bold); Icon(Icons.Default.ArrowBack, null, tint = Color(0xFF17221C), modifier = Modifier.size(15.dp)) }
+                            }
+                            Column(Modifier.weight(1f).clip(RoundedCornerShape(topStart = 27.dp, topEnd = 8.dp, bottomStart = 27.dp, bottomEnd = 27.dp))
+                                .background(Color.White).clickable { tab = Tab.FOOD }.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(Icons.Default.LocalFireDepartment, null, tint = Color(0xFFEA914A), modifier = Modifier.size(23.dp))
+                                Spacer(Modifier.height(4.dp))
+                                Text("دریافت انرژی", color = Color(0xFF17221C), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text(todayKcal.toInt().toString(), color = Color(0xFF254D37), fontSize = 24.sp, fontWeight = FontWeight.Black)
+                                Text("کیلوکالری", color = Color(0xFF78847B), fontSize = 9.sp)
+                            }
                         }
+                        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(23.dp)).background(Color.White).clickable { tab = Tab.PROFILE }.padding(17.dp),
+                            verticalArrangement = Arrangement.spacedBy(13.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("مسیر پیشرفت", color = Color(0xFF254D37), fontSize = 17.sp, fontWeight = FontWeight.Black)
+                                    Text("بر اساس داده‌های ثبت‌شده", color = Color(0xFF78847B), fontSize = 10.sp)
+                                }
+                                TextButton(onClick = { tab = Tab.PROFILE }) { Text("جزئیات", color = Color(0xFF254D37)) }
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                HomeProgressValue("وزن", weight, "kg", Modifier.weight(1f))
+                                HomeProgressValue("دور کمر", waist, "cm", Modifier.weight(1f))
+                                HomeProgressValue("کالری تمرین", workoutCaloriesToday.toString(), "kcal", Modifier.weight(1f))
+                            }
+                            Text("روندها فقط با ثبت اندازه‌گیری واقعی نمایش داده می‌شوند.", color = Color(0xFF78847B), fontSize = 9.sp)
+                        }
+                        WeatherPanel(weatherPermissionGranted, onWeatherPermission)
                         SmartCoachPanel(
-                            water = water,
-                            mealCount = mealLog.size,
-                            sleepHours = sleep,
-                            workoutCalories = workoutCaloriesToday,
-                            habitsCompleted = habitsDone.count { it },
-                            weeklyDays = weeklySnapshots.size,
-                            weeklyWorkoutCalories = weeklySnapshots.sumOf { it.workoutCalories },
+                            water = water, mealCount = mealLog.size, sleepHours = sleep,
+                            workoutCalories = workoutCaloriesToday, habitsCompleted = habitsDone.count { it },
+                            weeklyDays = weeklySnapshots.size, weeklyWorkoutCalories = weeklySnapshots.sumOf { it.workoutCalories },
                             weeklyAverageWater = if (weeklySnapshots.isEmpty()) 0 else weeklySnapshots.sumOf { it.water } / weeklySnapshots.size,
-                            onFood = { tab = Tab.FOOD },
-                            onRoutine = { tab = Tab.ROUTINE }
+                            onFood = { tab = Tab.FOOD }, onRoutine = { tab = Tab.ROUTINE }
                         )
                         VoiceCoachPanel(
                             message = when {
@@ -480,57 +568,14 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                                 water < 4 -> "یک لیوان آب بنوش و در طول روز آب‌رسانی را ادامه بده."
                                 workoutCaloriesToday == 0 -> "برای شروع، یک پیاده‌روی کوتاه و راحت انتخاب خوبی است."
                                 else -> "آفرین؛ استمرار را حفظ کن و برای ریکاوری هم زمان بگذار."
-                            },
-                            onActivity = { tab = Tab.ACTIVITY }
+                            }, onActivity = { tab = Tab.ACTIVITY }
                         )
                         WeeklyAnalyticsPanel(weeklySnapshots)
                         AchievementPanel(weeklySnapshots, workoutLog.size, habitsDone.count { it })
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                Text("سلامت روزانه", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
-                                Text("چیزهای کوچکی که جمع می‌شوند.", fontSize = 12.sp, color = Muted)
-                            }
-                            Text("OVERVIEW", fontSize = 10.sp, letterSpacing = 1.5.sp, color = Muted, fontWeight = FontWeight.Bold)
-                        }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            DashboardMini("خواب", sleep.toInt().toString(), "ساعت", Icons.Default.Bedtime, Modifier.weight(1f))
-                            DashboardMini("وزن", weight, "کیلوگرم", Icons.Default.MonitorWeight, Modifier.weight(1f))
-                        }
-                        DashboardStat("کالری سوزانده‌شده با تمرین امروز", workoutCaloriesToday.toString(), "کیلوکالری", Icons.Default.LocalFireDepartment, Modifier.fillMaxWidth())
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Button(
-                                onClick = { setWaterCount(water + 1) },
-                                modifier = Modifier.weight(1f).height(54.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = RoundedCornerShape(18.dp)
-                            ) { Icon(Icons.Default.WaterDrop, null); Spacer(Modifier.width(7.dp)); Text("ثبت آب") }
-                            OutlinedButton(
-                                onClick = { tab = Tab.FOOD },
-                                modifier = Modifier.weight(1f).height(54.dp),
-                                shape = RoundedCornerShape(18.dp)
-                            ) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text("ثبت غذا") }
-                        }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("فعالیت بعدی؟", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = Ink)
-                            TextButton(onClick = { tab = Tab.ACTIVITY }) { Text("مشاهده فعالیت", color = Ink) }
-                        }
-                        Box(
-                            Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(22.dp), Color(0xFFE8EDE4))
-                                .clickable { tab = Tab.ACTIVITY }.padding(18.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                                Box(Modifier.size(52.dp).clip(CircleShape).background(Lime), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.DirectionsRun, null, tint = Ink, modifier = Modifier.size(28.dp))
-                                }
-                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    Text("پیاده‌روی و دویدن", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Ink)
-                                    Text("مسیرت رو با GPS ثبت کن", fontSize = 12.sp, color = Muted)
-                                }
-                                Icon(Icons.Default.ArrowForward, null, tint = Ink)
-                            }
-                        }
                     }
                     Tab.ACTIVITY -> {
-                        ActivityPanel(tracking, distance, shownSeconds, routePoints, currentLocation, activityHistory, onStart, onStop, onRequestCurrentLocation)
+                        ActivityPanel(tracking, sessionPaused, distance, shownSeconds, routePoints, currentLocation, activityHistory,
+                            onStart, onPause, onResume, onStop, onRequestCurrentLocation)
                         SectionTitle("آخرین رکورد", "فعالیت ذخیره‌شده")
                         DashboardStat("مسافت آخرین فعالیت", lastActivity, "کیلومتر", Icons.Default.Route, Modifier.fillMaxWidth())
                     }
@@ -615,9 +660,10 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
 
 @Composable
 private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
+    val lightDock = selectedTab == Tab.HOME || selectedTab == Tab.ACTIVITY
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)
-            .glassSurface(RoundedCornerShape(28.dp), Color(0xFFEAF5F0)),
+            .then(if (lightDock) Modifier.clip(RoundedCornerShape(28.dp)).background(Color.White) else Modifier.glassSurface(RoundedCornerShape(28.dp), Color(0xFFEAF5F0))),
         shape = RoundedCornerShape(28.dp),
         color = Color.Transparent,
         shadowElevation = 0.dp,
@@ -632,7 +678,7 @@ private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
                 val selected = selectedTab == item
                 val iconSize by animateDpAsState(if (selected) 23.dp else 19.dp, spring(stiffness = Spring.StiffnessMedium), label = "nav-icon-size")
                 val iconScale by animateFloatAsState(if (selected) 1.08f else 1f, spring(stiffness = Spring.StiffnessLow), label = "nav-icon-scale")
-                val indicatorColor by animateColorAsState(if (selected) Lime else Color.Transparent, tween(220), label = "nav-indicator")
+                val indicatorColor by animateColorAsState(if (selected) (if (lightDock) Color(0xFFDDEBDD) else Lime) else Color.Transparent, tween(220), label = "nav-indicator")
                 val labelAlpha by animateFloatAsState(if (selected) 1f else .72f, tween(180), label = "nav-label-alpha")
                 Column(
                     Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(19.dp))
@@ -654,7 +700,7 @@ private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
                                 Tab.PROFILE -> Icons.Default.Person
                             },
                             contentDescription = item.label,
-                            tint = if (selected) MFitPalette.Canvas else Muted,
+                            tint = if (lightDock) (if (selected) Color(0xFF367A45) else Color(0xFF8A968A)) else if (selected) MFitPalette.Canvas else Muted,
                             modifier = Modifier.size(iconSize).graphicsLayer { scaleX = iconScale; scaleY = iconScale }
                         )
                     }
@@ -662,13 +708,55 @@ private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
                         item.label,
                         fontSize = 9.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (selected) Lime else Muted,
+                        color = if (lightDock) (if (selected) Color(0xFF367A45) else Color(0xFF849084)) else if (selected) Lime else Muted,
                         modifier = Modifier.graphicsLayer { alpha = labelAlpha },
                         maxLines = 1
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun FastingPanel(prefs: android.content.SharedPreferences) {
+    var startedAt by remember { mutableLongStateOf(prefs.getLong("fasting_started_at", 0L)) }
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(startedAt) {
+        if (startedAt > 0L) while (true) { now = System.currentTimeMillis(); delay(1000L) }
+    }
+    val elapsed = if (startedAt > 0L) ((now - startedAt) / 1000L).coerceAtLeast(0L) else 0L
+    val hours = elapsed / 3600L
+    val minutes = (elapsed % 3600L) / 60L
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(29.dp))
+        .background(Brush.linearGradient(listOf(Color(0xFF315F42), Color(0xFF173D2B), Color(0xFF10291E))))
+        .padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("MFIT · FASTING", color = Color(0xFFB9EF45), fontSize = 9.sp, letterSpacing = 1.7.sp, fontWeight = FontWeight.Bold)
+            Text("روزه‌داری", color = Color.White.copy(alpha = .8f), fontSize = 10.sp)
+        }
+        Text("روزه‌داری آگاهانه", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+        Text(if (startedAt > 0L) "زمان سپری‌شده از شروع بازه" else "بازه‌ی تغذیه و استراحتت را با آگاهی مدیریت کن.", color = Color.White.copy(alpha = .75f), fontSize = 11.sp)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            if (startedAt > 0L) {
+                Text("%02d:%02d".format(hours, minutes), color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
+                Button(onClick = { startedAt = 0L; prefs.edit().remove("fasting_started_at").putLong("last_fasting_seconds", elapsed).apply() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB9EF45), contentColor = Color(0xFF17221C))) { Text("پایان بازه") }
+            } else {
+                Text("هنوز بازه‌ای ثبت نشده", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Button(onClick = { startedAt = System.currentTimeMillis(); now = startedAt; prefs.edit().putLong("fasting_started_at", startedAt).apply() },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB9EF45), contentColor = Color(0xFF17221C))) { Text("شروع فستینگ") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeProgressValue(title: String, value: String, unit: String, modifier: Modifier = Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(title, color = Color(0xFF78847B), fontSize = 9.sp)
+        Text(value, color = Color(0xFF254D37), fontSize = 20.sp, fontWeight = FontWeight.Black)
+        Text(unit, color = Color(0xFF78847B), fontSize = 8.sp)
     }
 }
 
@@ -939,17 +1027,20 @@ private fun DashboardMini(title: String, value: String, unit: String, icon: andr
 
 @Composable
 private fun ActivityPanel(
-    tracking: Boolean,
-    distance: Float,
-    seconds: Long,
-    routePoints: List<Pair<Double, Double>>,
-    currentLocation: Pair<Double, Double>?,
-    activityHistory: List<String>,
-    onStart: () -> Unit,
-    onStop: () -> Unit,
-    onRequestCurrentLocation: () -> Unit
+    tracking: Boolean, paused: Boolean, distance: Float, seconds: Long,
+    routePoints: List<Pair<Double, Double>>, currentLocation: Pair<Double, Double>?,
+    activityHistory: List<String>, onStart: () -> Unit, onPause: () -> Unit,
+    onResume: () -> Unit, onStop: () -> Unit, onRequestCurrentLocation: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    var selectedActivity by remember { mutableIntStateOf(0) }
+    var satellite by remember { mutableStateOf(false) }
+    val types = listOf(
+        Icons.Default.DirectionsWalk to "پیاده‌روی", Icons.Default.DirectionsBike to "دوچرخه", Icons.Default.FitnessCenter to "قدرتی",
+        Icons.Default.DirectionsRun to "دویدن", Icons.Default.Favorite to "هوازی", Icons.Default.SelfImprovement to "یوگا"
+    )
+    val pulse by rememberInfiniteTransition(label = "live-dot").animateFloat(.25f, 1f,
+        infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "live-dot-alpha")
     val mapView = remember {
         Configuration.getInstance().userAgentValue = context.packageName
         MapView(context).apply {
@@ -962,145 +1053,176 @@ private fun ActivityPanel(
     }
     val routeLine = remember(mapView) {
         Polyline().apply {
-            outlinePaint.color = android.graphics.Color.rgb(52, 190, 145)
+            outlinePaint.color = android.graphics.Color.rgb(78, 154, 96)
             outlinePaint.strokeWidth = 10f
             outlinePaint.isAntiAlias = true
             outlinePaint.strokeCap = android.graphics.Paint.Cap.ROUND
             outlinePaint.strokeJoin = android.graphics.Paint.Join.ROUND
         }
     }
-    val currentMarker = remember(mapView) {
-        Marker(mapView).apply {
-            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            title = "موقعیت فعلی"
-        }
-    }
-    var hasCenteredOnRoute by remember(mapView) { mutableStateOf(false) }
+    val marker = remember(mapView) { Marker(mapView).apply { setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM); title = "موقعیت فعلی" } }
+    var hasCentered by remember(mapView) { mutableStateOf(false) }
     var renderedRoute by remember(mapView) { mutableStateOf<List<Pair<Double, Double>>>(emptyList()) }
     var renderedLocation by remember(mapView) { mutableStateOf<Pair<Double, Double>?>(null) }
+    DisposableEffect(mapView) { onDispose { mapView.onPause(); mapView.onDetach() } }
 
-    DisposableEffect(mapView) {
-        onDispose {
-            mapView.onPause()
-            mapView.onDetach()
+    Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("فعالیت", color = Color(0xFF203E2C), fontSize = 27.sp, fontWeight = FontWeight.Black)
+                Text("حرکت کن، پیشرفت کن", color = Color(0xFF728174), fontSize = 11.sp)
+            }
+            Row(Modifier.clip(RoundedCornerShape(30.dp)).background(Color(0xFFDCEBDD)).padding(horizontal = 11.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(7.dp).clip(CircleShape).background(Color(0xFF398B50)))
+                Spacer(Modifier.width(6.dp))
+                Text("GPS آماده", color = Color(0xFF315A40), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            }
         }
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(24.dp)),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-    ) {
-        Column {
-            AndroidView(
-                factory = { mapView },
-                modifier = Modifier.fillMaxWidth().height(260.dp),
-                update = { map ->
-                    // The Activity timer can recompose every 250 ms; redraw only when the GPS route changes.
-                    if (routePoints != renderedRoute || currentLocation != renderedLocation) {
-                        if (routePoints.isNotEmpty()) {
-                            val geo = routePoints.map { GeoPoint(it.first, it.second) }
-                            routeLine.setPoints(geo)
-                            if (routeLine !in map.overlays) map.overlays.add(routeLine)
-                            currentMarker.position = geo.last()
-                            currentMarker.icon = ContextCompat.getDrawable(context, android.R.drawable.ic_menu_mylocation)
-                            if (geo.size > 1) {
-                                val previousPoint = Location("mfit-route").apply {
-                                    latitude = geo[geo.lastIndex - 1].latitude
-                                    longitude = geo[geo.lastIndex - 1].longitude
-                                }
-                                val currentPoint = Location("mfit-route").apply {
-                                    latitude = geo.last().latitude
-                                    longitude = geo.last().longitude
-                                }
-                                currentMarker.rotation = previousPoint.bearingTo(currentPoint)
-                            }
-                            currentMarker.title = if (tracking) "موقعیت فعلی" else "پایان مسیر"
-                            if (currentMarker !in map.overlays) map.overlays.add(currentMarker)
-                            if (!hasCenteredOnRoute) {
-                                map.controller.setZoom(16.0)
-                                map.controller.setCenter(geo.last())
-                                hasCenteredOnRoute = true
-                            } else if (tracking) {
-                                map.controller.animateTo(geo.last())
-                            }
-                        } else if (currentLocation != null) {
-                            map.overlays.remove(routeLine)
-                            val point = GeoPoint(currentLocation.first, currentLocation.second)
-                            currentMarker.position = point
-                            currentMarker.icon = ContextCompat.getDrawable(context, android.R.drawable.ic_menu_mylocation)
-                            currentMarker.title = "موقعیت فعلی شما"
-                            if (currentMarker !in map.overlays) map.overlays.add(currentMarker)
-                            if (!hasCenteredOnRoute || renderedLocation == null) {
-                                map.controller.setZoom(16.0)
-                                map.controller.animateTo(point)
-                                hasCenteredOnRoute = true
-                            } else {
-                                map.controller.animateTo(point)
-                            }
-                        } else {
-                            map.overlays.remove(routeLine)
-                            map.overlays.remove(currentMarker)
-                            hasCenteredOnRoute = false
+        Row(Modifier.fillMaxWidth().clip(CircleShape).background(Color.White).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            listOf("امروز", "هفته", "تاریخچه").forEachIndexed { index, label ->
+                Box(Modifier.weight(1f).clip(CircleShape).background(if (index == 0) Color(0xFFDDEBDD) else Color.Transparent).clickable { }.padding(vertical = 9.dp), contentAlignment = Alignment.Center) {
+                    Text(label, color = if (index == 0) Color(0xFF28543A) else Color(0xFF758276), fontSize = 10.sp, fontWeight = if (index == 0) FontWeight.Bold else FontWeight.Medium)
+                }
+            }
+        }
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(25.dp))
+            .background(Brush.linearGradient(listOf(Color(0xFFA8DDA0), Color(0xFF8BCB8D), Color(0xFF78B982))))
+            .padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Row(Modifier.clip(CircleShape).background(Color(0xFF315B3D).copy(alpha = .72f)).border(1.dp, Color.White.copy(alpha = .65f), CircleShape).padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF20B94C).copy(alpha = if (tracking) pulse else 1f)))
+                    Spacer(Modifier.width(6.dp))
+                    Text("فعالیت زنده", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Box(Modifier.clip(CircleShape).background(Color(0xFF315B3D).copy(alpha = .72f)).border(1.dp, Color.White.copy(alpha = .65f), CircleShape).padding(horizontal = 10.dp, vertical = 5.dp)) {
+                    Text("مسافت پیموده‌شده", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            Text("%.2f KM".format(java.util.Locale.US, distance / 1000f), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, color = Color.White, fontSize = 42.sp, fontWeight = FontWeight.Black)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                ActivityStat("مدت", "%02d:%02d".format(seconds / 60, seconds % 60))
+                ActivityStat("کالری", "—")
+                ActivityStat("سرعت", if (seconds > 0 && distance > 0) "%.1f".format(java.util.Locale.US, distance / 1000f / (seconds / 3600f)) else "0.0")
+                ActivityStat("ضربان", "—")
+            }
+            Text("کنترل فعالیت", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                ActivityControl(Icons.Default.PlayArrow, "شروع", onStart, !tracking && !paused, Modifier.weight(1f))
+                ActivityControl(Icons.Default.Pause, "مکث", onPause, tracking, Modifier.weight(1f))
+                ActivityControl(Icons.Default.PlayCircleOutline, "ادامه", onResume, paused, Modifier.weight(1f))
+                ActivityControl(Icons.Default.Stop, "توقف", onStop, tracking || paused, Modifier.weight(1f))
+                ActivityControl(Icons.Default.Share, "اشتراک", {
+                    val text = "گزارش فعالیت MFit\nنوع فعالیت: ${types[selectedActivity].second}\nمدت: %02d:%02d\nمسافت: %.2f کیلومتر".format(seconds / 60, seconds % 60, distance / 1000f)
+                    val send = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text) }
+                    context.startActivity(Intent.createChooser(send, "اشتراک‌گذاری فعالیت"))
+                }, true, Modifier.weight(1f))
+            }
+            Text(when { tracking -> "فعالیت در حال اجرا"; paused -> "فعالیت موقتاً متوقف شده"; else -> "آماده‌ی شروع فعالیت" }, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+        }
+        SectionTitle("نوع فعالیت", "CHOOSE YOUR SESSION")
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            types.chunked(3).forEachIndexed { rowIndex, rowItems ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    rowItems.forEachIndexed { columnIndex, item ->
+                        val index = rowIndex * 3 + columnIndex
+                        val selected = selectedActivity == index
+                        Column(Modifier.weight(1f).height(78.dp).clip(RoundedCornerShape(17.dp))
+                            .background(if (selected) Color(0xFFD6EBD1) else Color.White)
+                            .border(1.dp, if (selected) Color(0xFF78A879) else Color.White, RoundedCornerShape(17.dp))
+                            .clickable { selectedActivity = index }.padding(8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                            Icon(item.first, null, tint = Color(0xFF315D3E), modifier = Modifier.size(21.dp))
+                            Spacer(Modifier.height(4.dp))
+                            Text(item.second, color = Color(0xFF36543D), fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                         }
-                        renderedRoute = routePoints
-                        renderedLocation = currentLocation
-                        map.invalidate()
+                    }
+                    repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("مسیر فعالیت", color = Color(0xFF254631), fontSize = 17.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
+            Text("%.2f KM".format(java.util.Locale.US, distance / 1000f), color = Color(0xFF254631), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        }
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color.White).padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth().clip(CircleShape).background(Color(0xFFEEF2EC)).padding(3.dp)) {
+                listOf("خیابانی", "ماهواره‌ای").forEachIndexed { index, label ->
+                    Box(Modifier.weight(1f).clip(CircleShape).background(if (satellite == (index == 1)) Color.White else Color.Transparent).clickable { satellite = index == 1 }.padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+                        Text(label, color = Color(0xFF34523C), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-            )
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    when {
-                        routePoints.isNotEmpty() -> "${routePoints.size} نقطه ثبت‌شده"
-                        currentLocation != null -> "موقعیت فعلی روی نقشه نمایش داده شد"
-                        else -> "در حال دریافت موقعیت GPS…"
-                    }, fontSize = 12.sp, color = Muted
-                )
-                TextButton(onClick = onRequestCurrentLocation) { Icon(Icons.Default.MyLocation, null); Spacer(Modifier.width(4.dp)); Text("مکان من") }
-                Text("© OpenStreetMap contributors", fontSize = 10.sp, color = Muted)
+            }
+            AndroidView(factory = { mapView }, modifier = Modifier.fillMaxWidth().height(155.dp).clip(RoundedCornerShape(16.dp)), update = { map ->
+                map.setTileSource(if (satellite) TileSourceFactory.USGS_SAT else TileSourceFactory.MAPNIK)
+                if (routePoints != renderedRoute || currentLocation != renderedLocation) {
+                    if (routePoints.isNotEmpty()) {
+                        val geo = routePoints.map { GeoPoint(it.first, it.second) }
+                        routeLine.setPoints(geo)
+                        if (routeLine !in map.overlays) map.overlays.add(routeLine)
+                        marker.position = geo.last()
+                        marker.icon = ContextCompat.getDrawable(context, android.R.drawable.ic_menu_mylocation)
+                        marker.title = if (tracking) "موقعیت فعلی" else "پایان مسیر"
+                        if (marker !in map.overlays) map.overlays.add(marker)
+                        if (!hasCentered) { map.controller.setZoom(16.0); map.controller.setCenter(geo.last()); hasCentered = true }
+                        else if (tracking) map.controller.animateTo(geo.last())
+                    } else if (currentLocation != null) {
+                        map.overlays.remove(routeLine)
+                        marker.position = GeoPoint(currentLocation.first, currentLocation.second)
+                        marker.icon = ContextCompat.getDrawable(context, android.R.drawable.ic_menu_mylocation)
+                        if (marker !in map.overlays) map.overlays.add(marker)
+                        if (!hasCentered) { map.controller.setZoom(16.0); map.controller.animateTo(marker.position); hasCentered = true }
+                    }
+                    renderedRoute = routePoints
+                    renderedLocation = currentLocation
+                    map.invalidate()
+                }
+            })
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(if (routePoints.isEmpty()) "با شروع فعالیت مسیر واقعی ثبت می‌شود" else "${routePoints.size} نقطه ثبت‌شده", color = Color(0xFF78847B), fontSize = 9.sp)
+                TextButton(onClick = onRequestCurrentLocation) { Icon(Icons.Default.MyLocation, null, modifier = Modifier.size(15.dp)); Text("مکان من", fontSize = 10.sp) }
+            }
+        }
+        SectionTitle("خلاصه امروز", "عملکرد روزانه")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ActivitySummary(Icons.Default.DirectionsWalk, "—", "قدم")
+            ActivitySummary(Icons.Default.Route, "%.2f".format(java.util.Locale.US, distance / 1000f), "کیلومتر")
+            ActivitySummary(Icons.Default.LocalFireDepartment, "—", "کالری")
+        }
+        if (activityHistory.isNotEmpty()) {
+            SectionTitle("سوابق", "آخرین فعالیت‌های ثبت‌شده")
+            activityHistory.take(5).forEach { item ->
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White).padding(13.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(item.substringBefore("|"), color = Color(0xFF254D37), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(item.substringAfter("|", ""), color = Color(0xFF78847B), fontSize = 10.sp)
+                }
             }
         }
     }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Metric("مسافت", "%.2f".format(distance / 1000f), "کیلومتر", Modifier.weight(1f))
-        Metric("زمان", "%02d:%02d".format(seconds / 60, seconds % 60), "دقیقه:ثانیه", Modifier.weight(1f))
+}
+
+@Composable private fun ActivityStat(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, color = Color.White.copy(alpha = .82f), fontSize = 9.sp)
+        Text(value, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Black)
     }
-    val km = distance / 1000f
-    val avgSpeed = if (seconds > 0L && km > 0f) km / (seconds / 3600f) else 0f
-    val paceSeconds = if (km > 0f) seconds / km else 0f
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Metric("سرعت میانگین", "%.1f".format(java.util.Locale.US, avgSpeed), "km/h", Modifier.weight(1f))
-        Metric("ریتم میانگین", if (paceSeconds.isFinite() && paceSeconds > 0f) "%d:%02d".format((paceSeconds / 60).toInt(), (paceSeconds % 60).toInt()) else "—", "دقیقه / کیلومتر", Modifier.weight(1f))
+}
+@Composable private fun ActivityControl(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, action: () -> Unit, enabled: Boolean, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(11.dp)
+    Column(modifier.clip(shape).background(Color.White.copy(alpha = if (enabled) .25f else .12f))
+        .border(1.dp, Color.White.copy(alpha = .62f), shape).clickable(enabled = enabled, onClick = action)
+        .padding(vertical = 8.dp, horizontal = 1.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, null, tint = Color.White, modifier = Modifier.size(17.dp))
+        Spacer(Modifier.height(3.dp))
+        Text(label, color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
-    if (activityHistory.isNotEmpty()) {
-        SectionTitle("سابقه فعالیت‌ها", "آخرین فعالیت‌های ثبت‌شده با GPS")
-        activityHistory.take(7).forEach { item ->
-            Row(
-                Modifier.fillMaxWidth().glassSurface(RoundedCornerShape(14.dp)).padding(13.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(item.substringBefore("|"), fontSize = 12.sp, color = Ink, fontWeight = FontWeight.SemiBold)
-                Text(item.substringAfter("|", ""), fontSize = 11.sp, color = Muted)
-            }
-        }
-    } else {
-        Text("بعد از پایان اولین فعالیت، سابقه‌اش اینجا نمایش داده می‌شود.", color = Muted, fontSize = 11.sp)
-    }
-    Button(
-        onClick = if (tracking) onStop else onStart,
-        modifier = Modifier.fillMaxWidth().height(58.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = if (tracking) Color(0xFFB3261E) else Lime, contentColor = Ink),
-        shape = RoundedCornerShape(18.dp)
-    ) {
-        Icon(if (tracking) Icons.Default.Stop else Icons.Default.PlayArrow, null)
-        Spacer(Modifier.width(8.dp))
-        Text(if (tracking) "پایان فعالیت" else "شروع ثبت فعالیت", fontWeight = FontWeight.Bold)
+}
+@Composable private fun ActivitySummary(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String, label: String) {
+    Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(Color.White).padding(vertical = 12.dp, horizontal = 7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, null, tint = Color(0xFF5B9360), modifier = Modifier.size(18.dp))
+        Text(value, color = Color(0xFF284A33), fontSize = 16.sp, fontWeight = FontWeight.Black)
+        Text(label, color = Color(0xFF78847B), fontSize = 9.sp)
     }
 }
 
