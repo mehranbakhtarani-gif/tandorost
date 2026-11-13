@@ -161,7 +161,8 @@ class TrackingService : Service(), LocationListener {
                 try { p.getString("workout_log_today", "")?.split("\n")?.filter { it.isNotBlank() }?.toMutableList() ?: mutableListOf() }
                 catch (_: Exception) { mutableListOf() }
             } else mutableListOf()
-            if (gpsCalories > 0) workoutLog.add("پیاده‌روی/دویدن GPS|${(seconds / 60).coerceAtLeast(1)}|$gpsCalories")
+            val activityName = p.getString("active_activity_name", "پیاده‌روی") ?: "پیاده‌روی"
+            if (gpsCalories > 0) workoutLog.add("$activityName GPS|${(seconds / 60).coerceAtLeast(1)}|$gpsCalories")
             p.edit().putString("activity_history", history.toString())
                 .putString("last_activity", "%.2f".format(Locale.US, meters / 1000f))
                 .putLong("last_activity_seconds", seconds)
