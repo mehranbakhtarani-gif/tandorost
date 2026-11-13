@@ -1037,7 +1037,6 @@ private fun ActivityPanel(
     onResume: () -> Unit, onStop: () -> Unit, onRequestCurrentLocation: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    var selectedActivity by remember { mutableIntStateOf(0) }
     var satellite by remember { mutableStateOf(false) }
     val types = listOf(
         Icons.Default.DirectionsWalk to "پیاده‌روی", Icons.Default.DirectionsBike to "دوچرخه", Icons.Default.FitnessCenter to "قدرتی",
@@ -1107,7 +1106,7 @@ private fun ActivityPanel(
             Text("%.2f KM".format(java.util.Locale.US, distance / 1000f), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, color = Color.White, fontSize = 42.sp, fontWeight = FontWeight.Black)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 ActivityStat("مدت", "%02d:%02d".format(seconds / 60, seconds % 60))
-                ActivityStat("کالری", "—")
+                ActivityStat("کالری", estimatedCalories.toString())
                 ActivityStat("سرعت", if (seconds > 0 && distance > 0) "%.1f".format(java.util.Locale.US, distance / 1000f / (seconds / 3600f)) else "0.0")
                 ActivityStat("ضربان", "—")
             }
