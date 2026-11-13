@@ -1410,7 +1410,7 @@ private val foods = listOf(
             }
         }, enabled = selected != null && grams > 0.0, modifier = Modifier.fillMaxWidth().height(54.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Ink), shape = RoundedCornerShape(17.dp)) {
-            Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text("ثبت در وعده امروز", color = Color.White)
+            Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text("ثبت در وعده امروز", color = MFitPalette.Canvas)
         }
         SectionTitle("ترکیب مواد مغذی", "مقایسه مقدار پروتئین، کربوهیدرات و چربی ثبت‌شده")
         Card(modifier = Modifier.glassSurface(RoundedCornerShape(20.dp)), colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(20.dp)) {
