@@ -1,4 +1,5 @@
 import 'dart:ui' show FontFeature;
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/session_engine.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'features/nutrition/food_catalog.dart';
 import 'features/nutrition/food_diary.dart';
+import 'features/nutrition/food_search_repository.dart';
 import 'features/progress/progress_log.dart';
 
 const ink = Color(0xFF17221C), muted = Color(0xFF78847B);
@@ -291,8 +293,29 @@ class NutritionPage extends StatefulWidget {
 class _NutritionPageState extends State<NutritionPage> {
   final search = TextEditingController(), grams = TextEditingController(text: '100');
   FoodNutrition? selected; bool saving = false;
+  Timer? searchDebounce;
+  bool onlineLoading = false;
+  List<FoodNutrition> onlineFoods = [];
+  int searchRequest = 0;
   @override
-  void dispose() { search.dispose(); grams.dispose(); super.dispose(); }
+  void dispose() { searchDebounce?.cancel(); search.dispose(); grams.dispose(); super.dispose(); }
+
+  void _onSearchChanged(String query) {
+    setState(() { selected = null; onlineFoods = []; onlineLoading = query.trim().length >= 2; });
+    searchDebounce?.cancel();
+    final request = ++searchRequest;
+    if (query.trim().length < 2) return;
+    searchDebounce = Timer(const Duration(milliseconds: 450), () async {
+      try {
+        final found = await FoodSearchRepository.searchOnline(query);
+        if (!mounted || request != searchRequest || query != search.text) return;
+        final localNames = FoodCatalog.search(query).map((e) => e.name.toLowerCase()).toSet();
+        setState(() { onlineFoods = found.where((e) => !localNames.contains(e.name.toLowerCase())).toList(); onlineLoading = false; });
+      } catch (_) {
+        if (mounted && request == searchRequest) setState(() => onlineLoading = false);
+      }
+    });
+  }
   List<FoodEntry> get todayEntries => widget.entries.where((e) => _sameDay(e.loggedAt, DateTime.now())).toList();
   Map<String, double> get totals {
     final result = {'kcal': 0.0, 'protein': 0.0, 'carbs': 0.0, 'fat': 0.0, 'fiber': 0.0};
@@ -302,7 +325,9 @@ class _NutritionPageState extends State<NutritionPage> {
 
   @override
   Widget build(BuildContext context) {
-    final t = totals, matches = FoodCatalog.search(search.text);
+    final t = totals;
+    final localMatches = FoodCatalog.search(search.text);
+    final matches = [...localMatches, ...onlineFoods];
     final amount = double.tryParse(grams.text) ?? 0;
     final preview = selected?.forGrams(amount) ?? const <String, double>{};
     return ListView(padding: const EdgeInsets.only(bottom: 25), children: [
@@ -330,10 +355,11 @@ class _NutritionPageState extends State<NutritionPage> {
       Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Container(
         padding: const EdgeInsets.all(17), decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(23)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          TextField(controller: search, onChanged: (_) => setState(() => selected = null), decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded, color: green), hintText: 'نام غذا را جست‌وجو کن؛ مثل تخم‌مرغ یا برنج')),
+          TextField(controller: search, onChanged: _onSearchChanged, decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded, color: green), hintText: 'نام غذا را جست‌وجو کن؛ مثل تخم‌مرغ یا برنج')),
           if (search.text.trim().isNotEmpty) ...[
             const SizedBox(height: 8),
-            if (matches.isEmpty) const Padding(padding: EdgeInsets.all(9), child: Text('در پایگاه فعلی پیدا نشد؛ بانک غذایی قابل گسترش است.', style: TextStyle(color: muted, fontSize: 11)))
+            if (onlineLoading) const Padding(padding: EdgeInsets.all(9), child: Row(children: [SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: 8), Text('جست‌وجو در بانک آنلاین غذا…', style: TextStyle(color: muted, fontSize: 10))]))
+            else if (matches.isEmpty) const Padding(padding: EdgeInsets.all(9), child: Text('موردی پیدا نشد. نام انگلیسی یا نام محصول بسته‌بندی‌شده را هم امتحان کن.', style: TextStyle(color: muted, fontSize: 11)))
             else ...matches.map((food) => ListTile(
               dense: true, contentPadding: EdgeInsets.zero,
               title: Text(food.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
