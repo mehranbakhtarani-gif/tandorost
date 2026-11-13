@@ -319,16 +319,18 @@ class _ActivityPageState extends State<ActivityPage> with SingleTickerProviderSt
 
   Future<void> _start() async {
     final restarting = _stopped;
+    final resumeGps = !restarting && widget.session.elapsed > Duration.zero;
     if (restarting) await widget.session.reset();
     await widget.session.start();
-    await widget.gps.start(resume: !restarting && widget.session.elapsed > Duration.zero);
+    await widget.gps.start(resume: resumeGps);
     if (mounted) setState(() => _stopped = false);
   }
   Future<void> _pause() async { await widget.session.pause(); await widget.gps.stop(); }
   Future<void> _continue() async { await widget.session.start(); await widget.gps.start(resume: true); if (mounted) setState(() => _stopped = false); }
   Future<void> _stop() async { await widget.session.pause(); await widget.gps.stop(); if (mounted) setState(() => _stopped = true); }
   Future<void> _share() async {
-    await Share.share('گزارش فعالیت MFit\nنوع فعالیت: ' + _activities[_selectedActivity][1] as String + '\nمدت: ' + widget.session.formatted + '\nمسافت: ' + widget.gps.distanceLabel + ' کیلومتر');
+    final type = _activities[_selectedActivity][1] as String;
+    await Share.share('گزارش فعالیت MFit\nنوع فعالیت: ' + type + '\nمدت: ' + widget.session.formatted + '\nمسافت: ' + widget.gps.distanceLabel + ' کیلومتر');
   }
 
   @override
