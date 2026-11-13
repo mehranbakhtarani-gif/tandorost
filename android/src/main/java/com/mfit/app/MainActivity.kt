@@ -6,6 +6,14 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.content.ClipData
+import android.content.ContentValues
+import android.os.Environment
+import android.provider.MediaStore
+import android.text.Layout
+import android.text.TextDirectionHeuristics
+import android.text.StaticLayout
+import android.text.TextPaint
 import android.os.Build
 import android.os.Bundle
 import android.location.Location
@@ -40,6 +48,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase
+import org.osmdroid.util.MapTileIndex
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
@@ -1172,6 +1182,160 @@ private fun DashboardMini(title: String, value: String, unit: String, icon: andr
     }
 }
 
+
+private object EsriWorldImagery : OnlineTileSourceBase(
+    "Esri World Imagery", 1, 19, 256, ".jpg",
+    arrayOf("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/")
+) {
+    override fun getTileURLString(mapTileIndex: Long): String {
+        val zoom = MapTileIndex.getZoom(mapTileIndex)
+        val x = MapTileIndex.getX(mapTileIndex)
+        val y = MapTileIndex.getY(mapTileIndex)
+        return "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/$zoom/$y/$x"
+    }
+}
+
+private fun shareMFitActivity(
+    context: Context,
+    activityName: String,
+    distanceMeters: Float,
+    seconds: Long,
+    calories: Int,
+    routePoints: List<Pair<Double, Double>>
+) {
+    val width = 1080
+    val height = 1350
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bitmap)
+    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    canvas.drawColor(android.graphics.Color.rgb(24, 43, 35))
+    paint.color = android.graphics.Color.rgb(44, 73, 57)
+    canvas.drawCircle(930f, 120f, 330f, paint)
+    paint.color = android.graphics.Color.rgb(37, 62, 49)
+    canvas.drawCircle(80f, 1180f, 300f, paint)
+
+    fun text(value: String, x: Float, y: Float, size: Float, color: Int, bold: Boolean = false) {
+        paint.color = color
+        paint.textSize = size
+        paint.typeface = if (bold) android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+            else android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
+        paint.textAlign = android.graphics.Paint.Align.LEFT
+        canvas.drawText(value, x, y, paint)
+    }
+    fun rtlText(value: String, x: Int, y: Int, boxWidth: Int, size: Float, color: Int, bold: Boolean = false) {
+        val tp = TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = size
+            this.color = color
+            typeface = android.graphics.Typeface.create("sans-serif", if (bold) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+        }
+        val layout = StaticLayout.Builder.obtain(value, 0, value.length, tp, boxWidth)
+            .setAlignment(Layout.Alignment.ALIGN_OPPOSITE)
+            .setTextDirection(TextDirectionHeuristics.RTL)
+            .setIncludePad(false)
+            .build()
+        canvas.save()
+        canvas.translate(x.toFloat(), y.toFloat())
+        layout.draw(canvas)
+        canvas.restore()
+    }
+
+    text("MFIT", 76f, 112f, 58f, android.graphics.Color.WHITE, true)
+    text("ACTIVITY RECAP", 76f, 158f, 25f, android.graphics.Color.rgb(174, 215, 180), true)
+    rtlText(activityName, 76, 205, 930, 48f, android.graphics.Color.WHITE, true)
+
+    val mapTop = 310f
+    val mapBottom = 790f
+    val mapRect = android.graphics.RectF(64f, mapTop, 1016f, mapBottom)
+    paint.shader = android.graphics.LinearGradient(64f, mapTop, 1016f, mapBottom,
+        android.graphics.Color.rgb(70, 105, 83), android.graphics.Color.rgb(35, 61, 48), android.graphics.Shader.TileMode.CLAMP)
+    canvas.drawRoundRect(mapRect, 38f, 38f, paint)
+    paint.shader = null
+    if (routePoints.size >= 2) {
+        val minLat = routePoints.minOf { it.first }; val maxLat = routePoints.maxOf { it.first }
+        val minLon = routePoints.minOf { it.second }; val maxLon = routePoints.maxOf { it.second }
+        val latSpan = (maxLat - minLat).coerceAtLeast(0.0001)
+        val lonSpan = (maxLon - minLon).coerceAtLeast(0.0001)
+        val route = android.graphics.Path()
+        routePoints.forEachIndexed { index, point ->
+            val x = 105f + ((point.second - minLon) / lonSpan).toFloat() * 870f
+            val y = mapBottom - 42f - ((point.first - minLat) / latSpan).toFloat() * 390f
+            if (index == 0) route.moveTo(x, y) else route.lineTo(x, y)
+        }
+        paint.color = android.graphics.Color.WHITE
+        paint.style = android.graphics.Paint.Style.STROKE
+        paint.strokeWidth = 18f
+        paint.strokeCap = android.graphics.Paint.Cap.ROUND
+        paint.strokeJoin = android.graphics.Paint.Join.ROUND
+        canvas.drawPath(route, paint)
+        paint.color = android.graphics.Color.rgb(151, 224, 105)
+        paint.strokeWidth = 10f
+        canvas.drawPath(route, paint)
+        paint.style = android.graphics.Paint.Style.FILL
+        val first = routePoints.first()
+        val last = routePoints.last()
+        fun px(p: Pair<Double, Double>) = 105f + ((p.second - minLon) / lonSpan).toFloat() * 870f
+        fun py(p: Pair<Double, Double>) = mapBottom - 42f - ((p.first - minLat) / latSpan).toFloat() * 390f
+        paint.color = android.graphics.Color.WHITE
+        canvas.drawCircle(px(first), py(first), 17f, paint)
+        paint.color = android.graphics.Color.rgb(151, 224, 105)
+        canvas.drawCircle(px(last), py(last), 17f, paint)
+    } else {
+        text("GPS ROUTE", 105f, 565f, 26f, android.graphics.Color.LTGRAY, true)
+        text("No GPS track recorded", 105f, 610f, 22f, android.graphics.Color.LTGRAY)
+    }
+    val distanceKm = distanceMeters / 1000f
+    val duration = "%02d:%02d:%02d".format(seconds / 3600L, (seconds % 3600L) / 60L, seconds % 60L)
+    val speed = if (seconds > 0 && distanceKm > 0f) distanceKm / (seconds / 3600f) else 0f
+    val labels = listOf("DISTANCE", "DURATION", "AVG SPEED", "CALORIES")
+    val values = listOf("%.2f km".format(java.util.Locale.US, distanceKm), duration,
+        "%.1f km/h".format(java.util.Locale.US, speed), "$calories kcal")
+    val xPositions = listOf(76f, 555f)
+    val yPositions = listOf(900f, 1080f)
+    var i = 0
+    for (y in yPositions) for (x in xPositions) {
+        text(labels[i], x, y, 23f, android.graphics.Color.rgb(172, 204, 180), true)
+        text(values[i], x, y + 72f, 48f, android.graphics.Color.WHITE, true)
+        i++
+    }
+    paint.color = android.graphics.Color.rgb(115, 156, 123)
+    canvas.drawRect(76f, 1190f, 1004f, 1193f, paint)
+    text("MOVE WITH MFIT", 76f, 1255f, 25f, android.graphics.Color.WHITE, true)
+    text("mfit", 900f, 1255f, 25f, android.graphics.Color.rgb(174, 215, 180), true)
+
+    val valuesToSave = ContentValues().apply {
+        put(MediaStore.Images.Media.DISPLAY_NAME, "MFIT-Activity-${System.currentTimeMillis()}.jpg")
+        put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/MFit")
+            put(MediaStore.Images.Media.IS_PENDING, 1)
+        }
+    }
+    val resolver = context.contentResolver
+    val imageUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, valuesToSave)
+        ?: throw IllegalStateException("ذخیره تصویر انجام نشد")
+    try {
+        resolver.openOutputStream(imageUri)?.use { stream ->
+            if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 94, stream)) throw IllegalStateException("ساخت تصویر ناموفق بود")
+        } ?: throw IllegalStateException("فایل تصویر باز نشد")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            resolver.update(imageUri, ContentValues().apply { put(MediaStore.Images.Media.IS_PENDING, 0) }, null, null)
+        }
+    } catch (error: Exception) {
+        resolver.delete(imageUri, null, null)
+        throw error
+    } finally {
+        bitmap.recycle()
+    }
+    val send = Intent(Intent.ACTION_SEND).apply {
+        type = "image/jpeg"
+        putExtra(Intent.EXTRA_STREAM, imageUri)
+        putExtra(Intent.EXTRA_TEXT, "فعالیت من با MFit")
+        clipData = ClipData.newUri(resolver, "MFit activity", imageUri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(Intent.createChooser(send, "اشتراک‌گذاری کارت فعالیت"))
+}
+
 @Composable
 private fun ActivityPanel(
     tracking: Boolean, paused: Boolean, distance: Float, seconds: Long,
@@ -1273,10 +1437,12 @@ private fun ActivityPanel(
                 ActivityControl(Icons.Default.Pause, "مکث", onPause, tracking, Modifier.weight(1f))
                 ActivityControl(Icons.Default.PlayCircleOutline, "ادامه", onResume, paused, Modifier.weight(1f))
                 ActivityControl(Icons.Default.Stop, "توقف", onStop, tracking || paused, Modifier.weight(1f))
-                ActivityControl(Icons.Default.Share, "اشتراک", {
-                    val text = "گزارش فعالیت MFit\nنوع فعالیت: ${types[selectedActivity].second}\nمدت: %02d:%02d\nمسافت: %.2f کیلومتر".format(shownSeconds / 60, shownSeconds % 60, shownDistanceMeters / 1000f)
-                    val send = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, text) }
-                    context.startActivity(Intent.createChooser(send, "اشتراک‌گذاری فعالیت"))
+                ActivityControl(Icons.Default.Share, "کارت اشتراک", {
+                    runCatching {
+                        shareMFitActivity(context, types[selectedActivity].second, shownDistanceMeters, shownSeconds, estimatedCalories, routePoints)
+                    }.onFailure {
+                        android.widget.Toast.makeText(context, it.message ?: "ساخت کارت اشتراک ناموفق بود", android.widget.Toast.LENGTH_LONG).show()
+                    }
                 }, true, Modifier.weight(1f))
             }
             Text(when { tracking -> "فعالیت در حال اجرا"; paused -> "فعالیت موقتاً متوقف شده"; else -> "آماده‌ی شروع فعالیت" }, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
@@ -1314,8 +1480,8 @@ private fun ActivityPanel(
                     }
                 }
             }
-            AndroidView(factory = { mapView }, modifier = Modifier.fillMaxWidth().height(155.dp).clip(RoundedCornerShape(16.dp)), update = { map ->
-                map.setTileSource(if (satellite) TileSourceFactory.USGS_SAT else TileSourceFactory.MAPNIK)
+            AndroidView(factory = { mapView }, modifier = Modifier.fillMaxWidth().height(230.dp).clip(RoundedCornerShape(16.dp)), update = { map ->
+                map.setTileSource(if (satellite) EsriWorldImagery else TileSourceFactory.MAPNIK)
                 if (routePoints != renderedRoute || currentLocation != renderedLocation) {
                     if (routePoints.isNotEmpty()) {
                         val geo = routePoints.map { GeoPoint(it.first, it.second) }
@@ -1341,6 +1507,7 @@ private fun ActivityPanel(
             })
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(if (routePoints.isEmpty()) "با شروع فعالیت مسیر واقعی ثبت می‌شود" else "${routePoints.size} نقطه ثبت‌شده", color = Color(0xFF78847B), fontSize = 9.sp)
+                Text("© OpenStreetMap contributors  •  تصاویر ماهواره‌ای © Esri", color = Color(0xFF89968A), fontSize = 8.sp)
                 TextButton(onClick = onRequestCurrentLocation) { Icon(Icons.Default.MyLocation, null, modifier = Modifier.size(15.dp)); Text("مکان من", fontSize = 10.sp) }
             }
         }
