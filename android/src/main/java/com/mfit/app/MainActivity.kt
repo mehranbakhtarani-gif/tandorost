@@ -59,6 +59,8 @@ class MainActivity : ComponentActivity() {
     private var liveSeconds by mutableLongStateOf(0L)
     private var sessionStartedAt by mutableLongStateOf(0L)
     private var routePoints by mutableStateOf<List<Pair<Double, Double>>>(emptyList())
+    private var currentLocation by mutableStateOf<Pair<Double, Double>?>(null)
+    private var currentLocationListener: LocationListener? = null
     private var activityHistory by mutableStateOf<List<String>>(emptyList())
     private var lastActivity by mutableStateOf("—")
     private var imported by mutableStateOf(false)
@@ -68,6 +70,9 @@ class MainActivity : ComponentActivity() {
     }
     private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
         if (grants[Manifest.permission.ACCESS_FINE_LOCATION] == true || grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true) startTracking()
+    }
+    private val currentLocationPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+        if (grants[Manifest.permission.ACCESS_FINE_LOCATION] == true || grants[Manifest.permission.ACCESS_COARSE_LOCATION] == true) updateCurrentLocation()
     }
     private val importLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) try {
@@ -90,8 +95,8 @@ class MainActivity : ComponentActivity() {
             ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val filter = IntentFilter("com.mfit.app.TRACK_UPDATE")
         if (Build.VERSION.SDK_INT >= 33) { registerReceiver(receiver, filter, RECEIVER_NOT_EXPORTED) } else { registerReceiver(receiver, filter) }
-        setContent { MFitApp(tracking, liveDistance, liveSeconds, sessionStartedAt, lastActivity, imported, routePoints, activityHistory, 
-            onStart = { requestTracking() }, onStop = { stopTracking() },
+        setContent { MFitApp(tracking, liveDistance, liveSeconds, sessionStartedAt, lastActivity, imported, routePoints, currentLocation, activityHistory,
+            onStart = { requestTracking() }, onStop = { stopTracking() }, onRequestCurrentLocation = { requestCurrentLocation() },
             onImport = { importLauncher.launch(arrayOf("application/json", "text/*")) },
             weatherPermissionGranted = weatherPermissionGranted,
             onWeatherPermission = { weatherPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }) }
@@ -111,9 +116,56 @@ class MainActivity : ComponentActivity() {
         val missing = permissions.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
         if (missing.isEmpty()) startTracking() else permissionLauncher.launch(missing.toTypedArray())
     }
+    private fun requestCurrentLocation() {
+        val fine = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarse = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!fine && !coarse) {
+            currentLocationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+            return
+        }
+        updateCurrentLocation()
+    }
+    @Suppress("MissingPermission")
+    private fun updateCurrentLocation() {
+        val manager = getSystemService(LOCATION_SERVICE) as LocationManager
+        try {
+            val lastKnown = manager.getProviders(true).mapNotNull { provider ->
+                runCatching { manager.getLastKnownLocation(provider) }.getOrNull()
+            }.maxByOrNull { it.time }
+            if (lastKnown != null) currentLocation = lastKnown.latitude to lastKnown.longitude
+            currentLocationListener?.let { runCatching { manager.removeUpdates(it) } }
+            val listener = object : LocationListener {
+                override fun onLocationChanged(location: Location) {
+                    currentLocation = location.latitude to location.longitude
+                    runCatching { manager.removeUpdates(this) }
+                    if (currentLocationListener === this) currentLocationListener = null
+                }
+                @Deprecated("Deprecated in Android")
+                override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) = Unit
+                override fun onProviderEnabled(provider: String) = Unit
+                override fun onProviderDisabled(provider: String) = Unit
+            }
+            currentLocationListener = listener
+            val provider = when {
+                manager.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
+                manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
+                else -> null
+            }
+            if (provider != null) manager.requestLocationUpdates(provider, 1000L, 0f, listener, mainLooper)
+        } catch (_: SecurityException) {
+            currentLocation = null
+        } catch (_: Exception) {
+            // Keep a previously available last-known location visible if a fresh fix is unavailable.
+        }
+    }
     private fun startTracking() { val started = System.currentTimeMillis(); prefs.edit().putFloat("live_distance", 0f).putLong("live_seconds", 0L).putLong("session_started_at", started).putString("route_points", "[]").putBoolean("tracking_active", true).apply(); refreshTrack(); ContextCompat.startForegroundService(this, Intent(this, TrackingService::class.java)); tracking = true }
     private fun stopTracking() { stopService(Intent(this, TrackingService::class.java)); tracking = false; prefs.edit().putBoolean("tracking_active", false).apply(); refreshTrack() }
-    override fun onDestroy() { unregisterReceiver(receiver); super.onDestroy() }
+    override fun onDestroy() {
+        currentLocationListener?.let { listener -> runCatching { (getSystemService(LOCATION_SERVICE) as LocationManager).removeUpdates(listener) } }
+        currentLocationListener = null
+        unregisterReceiver(receiver)
+        super.onDestroy()
+    }
 }
 
 
@@ -246,8 +298,8 @@ private data class DailyWellnessSnapshot(
 private enum class Tab(val label: String) { HOME("خانه"), ACTIVITY("فعالیت"), FOOD("تغذیه"), ROUTINE("روتین"), PROFILE("پروفایل") }
 
 @Composable
-private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionStartedAt: Long, lastActivity: String, imported: Boolean, routePoints: List<Pair<Double, Double>>, activityHistory: List<String>,
-                    onStart: () -> Unit, onStop: () -> Unit, onImport: () -> Unit,
+private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionStartedAt: Long, lastActivity: String, imported: Boolean, routePoints: List<Pair<Double, Double>>, currentLocation: Pair<Double, Double>?, activityHistory: List<String>,
+                    onStart: () -> Unit, onStop: () -> Unit, onRequestCurrentLocation: () -> Unit, onImport: () -> Unit,
                     weatherPermissionGranted: Boolean, onWeatherPermission: () -> Unit) {
     var tab by remember { mutableStateOf(Tab.HOME) }
     var displaySeconds by remember { mutableLongStateOf(seconds) }
@@ -260,6 +312,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
         } else displaySeconds = seconds
     }
     val shownSeconds = if (tracking) displaySeconds else seconds
+    LaunchedEffect(tab) { if (tab == Tab.ACTIVITY) onRequestCurrentLocation() }
     var water by remember { mutableIntStateOf(0) }
     var meal by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("100") }
@@ -476,7 +529,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                         }
                     }
                     Tab.ACTIVITY -> {
-                        ActivityPanel(tracking, distance, shownSeconds, routePoints, activityHistory, onStart, onStop)
+                        ActivityPanel(tracking, distance, shownSeconds, routePoints, currentLocation, activityHistory, onStart, onStop, onRequestCurrentLocation)
                         SectionTitle("آخرین رکورد", "فعالیت ذخیره‌شده")
                         DashboardStat("مسافت آخرین فعالیت", lastActivity, "کیلومتر", Icons.Default.Route, Modifier.fillMaxWidth())
                     }
@@ -889,9 +942,11 @@ private fun ActivityPanel(
     distance: Float,
     seconds: Long,
     routePoints: List<Pair<Double, Double>>,
+    currentLocation: Pair<Double, Double>?,
     activityHistory: List<String>,
     onStart: () -> Unit,
-    onStop: () -> Unit
+    onStop: () -> Unit,
+    onRequestCurrentLocation: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val mapView = remember {
@@ -921,6 +976,7 @@ private fun ActivityPanel(
     }
     var hasCenteredOnRoute by remember(mapView) { mutableStateOf(false) }
     var renderedRoute by remember(mapView) { mutableStateOf<List<Pair<Double, Double>>>(emptyList()) }
+    var renderedLocation by remember(mapView) { mutableStateOf<Pair<Double, Double>?>(null) }
 
     DisposableEffect(mapView) {
         onDispose {
@@ -940,7 +996,7 @@ private fun ActivityPanel(
                 modifier = Modifier.fillMaxWidth().height(260.dp),
                 update = { map ->
                     // The Activity timer can recompose every 250 ms; redraw only when the GPS route changes.
-                    if (routePoints != renderedRoute) {
+                    if (routePoints != renderedRoute || currentLocation != renderedLocation) {
                         if (routePoints.isNotEmpty()) {
                             val geo = routePoints.map { GeoPoint(it.first, it.second) }
                             routeLine.setPoints(geo)
@@ -967,12 +1023,27 @@ private fun ActivityPanel(
                             } else if (tracking) {
                                 map.controller.animateTo(geo.last())
                             }
+                        } else if (currentLocation != null) {
+                            map.overlays.remove(routeLine)
+                            val point = GeoPoint(currentLocation.first, currentLocation.second)
+                            currentMarker.position = point
+                            currentMarker.icon = ContextCompat.getDrawable(context, android.R.drawable.ic_menu_mylocation)
+                            currentMarker.title = "موقعیت فعلی شما"
+                            if (currentMarker !in map.overlays) map.overlays.add(currentMarker)
+                            if (!hasCenteredOnRoute || renderedLocation == null) {
+                                map.controller.setZoom(16.0)
+                                map.controller.animateTo(point)
+                                hasCenteredOnRoute = true
+                            } else {
+                                map.controller.animateTo(point)
+                            }
                         } else {
                             map.overlays.remove(routeLine)
                             map.overlays.remove(currentMarker)
                             hasCenteredOnRoute = false
                         }
                         renderedRoute = routePoints
+                        renderedLocation = currentLocation
                         map.invalidate()
                     }
                 }
@@ -982,7 +1053,14 @@ private fun ActivityPanel(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(if (routePoints.isEmpty()) "منتظر اولین موقعیت GPS…" else "${routePoints.size} نقطه ثبت‌شده", fontSize = 12.sp, color = Muted)
+                Text(
+                    when {
+                        routePoints.isNotEmpty() -> "${routePoints.size} نقطه ثبت‌شده"
+                        currentLocation != null -> "موقعیت فعلی روی نقشه نمایش داده شد"
+                        else -> "در حال دریافت موقعیت GPS…"
+                    }, fontSize = 12.sp, color = Muted
+                )
+                TextButton(onClick = onRequestCurrentLocation) { Icon(Icons.Default.MyLocation, null); Spacer(Modifier.width(4.dp)); Text("مکان من") }
                 Text("© OpenStreetMap contributors", fontSize = 10.sp, color = Muted)
             }
         }
