@@ -70,7 +70,7 @@ class GpsTracker extends ChangeNotifier {
     });
   }
 
-  Future<bool> start() async {
+  Future<bool> start({bool resume = false}) async {
     await initialize();
     if (kIsWeb) {
       status = 'برای GPS واقعی از نسخه Android استفاده کن';
@@ -101,12 +101,14 @@ class GpsTracker extends ChangeNotifier {
       }
     }
     await Permission.notification.request();
-    route = [];
-    distanceMeters = 0;
     speedMps = 0;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_routeKey, '[]');
-    await prefs.setDouble(_distanceKey, 0);
+    if (!resume) {
+      route = [];
+      distanceMeters = 0;
+      await prefs.setString(_routeKey, '[]');
+      await prefs.setDouble(_distanceKey, 0);
+    }
     await _service.startService();
     isTracking = true;
     status = 'سرویس GPS در حال راه‌اندازی است';
@@ -157,11 +159,17 @@ void gpsServiceOnStart(ServiceInstance service) async {
     );
   }
   final prefs = await SharedPreferences.getInstance();
-  var distance = 0.0;
+  var distance = prefs.getDouble(_distanceKey) ?? 0.0;
   Position? previous;
   var route = <Map<String, double>>[];
-  await prefs.setString(_routeKey, '[]');
-  await prefs.setDouble(_distanceKey, 0);
+  final savedRoute = prefs.getString(_routeKey);
+  if (savedRoute != null) {
+    try {
+      route = (jsonDecode(savedRoute) as List).map((p) => <String, double>{
+        'lat': (p['lat'] as num).toDouble(), 'lng': (p['lng'] as num).toDouble(),
+      }).toList();
+    } catch (_) { route = []; }
+  }
 
   final stream = Geolocator.getPositionStream(
     locationSettings: const LocationSettings(
