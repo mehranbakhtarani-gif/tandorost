@@ -47,9 +47,9 @@ internal fun Modifier.glassSurface(
     .background(
         Brush.linearGradient(
             listOf(
-                Color(0xFF536A6A).copy(alpha = .48f),
-                Color(0xFF324B4B).copy(alpha = .88f),
-                Color(0xFF0D1819).copy(alpha = .96f)
+                Color(0xFF536A6A).copy(alpha = .30f),
+                Color(0xFF324B4B).copy(alpha = .58f),
+                Color(0xFF0D1819).copy(alpha = .76f)
             )
         )
     )
