@@ -1362,7 +1362,7 @@ private fun ActivityPanel(
         mutableIntStateOf(types.indexOfFirst { it.second == activityPrefs.getString("active_activity_name", "پیاده‌روی") }.coerceAtLeast(0))
     }
     LaunchedEffect(selectedActivity) { activityPrefs.edit().putString("active_activity_name", types[selectedActivity].second).apply() }
-    val weightKg = activityPrefs.getString("weight", "70")?.replace(",", ".")?.toFloatOrNull()?.coerceIn(30f, 250f) ?: 70f
+    val weightKg = activityPrefs.getString("weight", "96")?.replace(",", ".")?.toFloatOrNull()?.coerceIn(30f, 250f) ?: 96f
     val lastSummary = activityHistory.firstOrNull()?.substringAfter("|", "") ?: ""
     val lastDistanceKm = Regex("""([0-9]+(?:\.[0-9]+)?)\s*km""").find(lastSummary)?.groupValues?.get(1)?.toFloatOrNull() ?: 0f
     val lastTime = Regex("""([0-9]+):([0-9]{2})""").find(lastSummary)
