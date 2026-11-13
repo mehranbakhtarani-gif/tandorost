@@ -14,8 +14,15 @@ class FoodDiary {
       final rows = jsonDecode(raw) as List<dynamic>;
       return rows.map((row) {
         final data = row as Map<String, dynamic>;
-        final food = FoodCatalog.foods.firstWhere(
-          (item) => item.id == data['foodId'],
+        final food = FoodCatalog.foods.where((item) => item.id == data['foodId']).firstOrNull ?? FoodNutrition(
+          id: data['foodId'] as String,
+          name: data['foodName'] as String? ?? 'خوراکی ثبت‌شده',
+          kcal: (data['kcal'] as num?)?.toDouble() ?? 0,
+          protein: (data['protein'] as num?)?.toDouble() ?? 0,
+          carbs: (data['carbs'] as num?)?.toDouble() ?? 0,
+          fat: (data['fat'] as num?)?.toDouble() ?? 0,
+          fiber: (data['fiber'] as num?)?.toDouble() ?? 0,
+          sourceLabel: data['sourceLabel'] as String? ?? 'اطلاعات ذخیره‌شده',
         );
         return FoodEntry(
           food: food,
