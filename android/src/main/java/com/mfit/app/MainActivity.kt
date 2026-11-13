@@ -578,8 +578,10 @@ private fun MFitApp(tracking: Boolean, sessionPaused: Boolean, distance: Float, 
                     Tab.ACTIVITY -> {
                         ActivityPanel(tracking, sessionPaused, distance, shownSeconds, routePoints, currentLocation, activityHistory,
                             onStart, onPause, onResume, onStop, onRequestCurrentLocation)
-                        SectionTitle("آخرین رکورد", "فعالیت ذخیره‌شده")
-                        DashboardStat("مسافت آخرین فعالیت", lastActivity, "کیلومتر", Icons.Default.Route, Modifier.fillMaxWidth())
+                        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color.White).padding(15.dp)) {
+                            Text("آخرین رکورد", color = Color(0xFF254D37), fontSize = 15.sp, fontWeight = FontWeight.Black)
+                            Text("مسافت آخرین فعالیت: $lastActivity کیلومتر", color = Color(0xFF78847B), fontSize = 11.sp)
+                        }
                     }
                     Tab.FOOD -> FoodPanel(meal, { meal = it }, amount, { amount = it }, mealLog, { value ->
                         mealLog = mealLog + value
@@ -1123,7 +1125,7 @@ private fun ActivityPanel(
             }
             Text(when { tracking -> "فعالیت در حال اجرا"; paused -> "فعالیت موقتاً متوقف شده"; else -> "آماده‌ی شروع فعالیت" }, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
         }
-        SectionTitle("نوع فعالیت", "CHOOSE YOUR SESSION")
+        ActivitySectionTitle("نوع فعالیت", "CHOOSE YOUR SESSION")
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             types.chunked(3).forEachIndexed { rowIndex, rowItems ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1186,14 +1188,14 @@ private fun ActivityPanel(
                 TextButton(onClick = onRequestCurrentLocation) { Icon(Icons.Default.MyLocation, null, modifier = Modifier.size(15.dp)); Text("مکان من", fontSize = 10.sp) }
             }
         }
-        SectionTitle("خلاصه امروز", "عملکرد روزانه")
+        ActivitySectionTitle("خلاصه امروز", "عملکرد روزانه")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ActivitySummary(Icons.Default.DirectionsWalk, "—", "قدم", Modifier.weight(1f))
             ActivitySummary(Icons.Default.Route, "%.2f".format(java.util.Locale.US, distance / 1000f), "کیلومتر", Modifier.weight(1f))
             ActivitySummary(Icons.Default.LocalFireDepartment, "—", "کالری", Modifier.weight(1f))
         }
         if (activityHistory.isNotEmpty()) {
-            SectionTitle("سوابق", "آخرین فعالیت‌های ثبت‌شده")
+            ActivitySectionTitle("سوابق", "آخرین فعالیت‌های ثبت‌شده")
             activityHistory.take(5).forEach { item ->
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color.White).padding(13.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(item.substringBefore("|"), color = Color(0xFF254D37), fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -1201,6 +1203,14 @@ private fun ActivityPanel(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ActivitySectionTitle(title: String, subtitle: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(title, color = Color(0xFF254631), fontSize = 17.sp, fontWeight = FontWeight.Black)
+        Text(subtitle, color = Color(0xFF78847B), fontSize = 9.sp, letterSpacing = .5.sp)
     }
 }
 
