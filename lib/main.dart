@@ -101,7 +101,7 @@ class _MFitShellState extends State<MFitShell> {
     const items = [
       [Icons.home_rounded, 'خانه'], [Icons.directions_run_rounded, 'فعالیت'],
       [Icons.restaurant_rounded, 'تغذیه'], [Icons.map_outlined, 'نقشه'],
-      [Icons.insights_rounded, 'پیشرفت'],
+      [Icons.person_outline_rounded, 'پروفایل'],
     ];
     return Container(
       margin: const EdgeInsets.fromLTRB(14, 7, 14, 10),
@@ -430,7 +430,7 @@ class _ProgressPageState extends State<ProgressPage> {
     final delta = data.length < 2 ? null : data.last.value - data.first.value;
     final unit = _metricUnit(metric);
     return ListView(padding: const EdgeInsets.only(bottom: 24), children: [
-      const PageHeader('TRACK YOUR EVOLUTION', 'تحلیل پیشرفت'),
+      const PageHeader('YOUR PROFILE · PERFORMANCE', 'پروفایل و پیشرفت'),
       Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Container(
         padding: const EdgeInsets.all(18), decoration: BoxDecoration(color: green, borderRadius: BorderRadius.circular(24)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
