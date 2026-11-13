@@ -1048,14 +1048,14 @@ private fun ActivityPanel(
     }
     LaunchedEffect(selectedActivity) { activityPrefs.edit().putString("active_activity_name", types[selectedActivity].second).apply() }
     val weightKg = activityPrefs.getString("weight", "70")?.replace(",", ".")?.toFloatOrNull()?.coerceIn(30f, 250f) ?: 70f
-    val estimatedCalories = (weightKg * (shownDistanceMeters / 1000f) * .7f).toInt().coerceAtLeast(0)
     val lastSummary = activityHistory.firstOrNull()?.substringAfter("|", "") ?: ""
-    val lastDistanceKm = Regex("""([0-9]+(?:\\.[0-9]+)?)\\s*km""").find(lastSummary)?.groupValues?.get(1)?.toFloatOrNull() ?: 0f
+    val lastDistanceKm = Regex("""([0-9]+(?:\.[0-9]+)?)\s*km""").find(lastSummary)?.groupValues?.get(1)?.toFloatOrNull() ?: 0f
     val lastTime = Regex("""([0-9]+):([0-9]{2})""").find(lastSummary)
     val completedSeconds = if (lastTime != null) (lastTime.groupValues[1].toLongOrNull() ?: 0L) * 60L + (lastTime.groupValues[2].toLongOrNull() ?: 0L) else 0L
     val sessionInProgress = tracking || paused || seconds > 0L || distance > 0f
     val shownDistanceMeters = if (sessionInProgress) distance else lastDistanceKm * 1000f
     val shownSeconds = if (sessionInProgress) seconds else completedSeconds
+    val estimatedCalories = (weightKg * (shownDistanceMeters / 1000f) * .7f).toInt().coerceAtLeast(0)
     val pulse by rememberInfiniteTransition(label = "live-dot").animateFloat(.25f, 1f,
         infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "live-dot-alpha")
     val mapView = remember {
