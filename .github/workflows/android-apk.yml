@@ -1,0 +1,51 @@
+name: Build MFit Android APK
+
+on:
+  push:
+    branches:
+      - preview/mfit-flutter-first-look
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mfit-android-apk
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate standard Android Gradle scaffold
+        shell: bash
+        run: |
+          mkdir -p /tmp/mfit-android-overrides
+          cp android/app/src/main/AndroidManifest.xml /tmp/mfit-android-overrides/AndroidManifest.xml
+          cp android/app/src/main/kotlin/com/mfit/app/MainActivity.kt /tmp/mfit-android-overrides/MainActivity.kt
+          flutter create --platforms=android --org com.mfit --project-name mfit /tmp/mfit-scaffold
+          rm -rf android
+          cp -R /tmp/mfit-scaffold/android android
+          cp /tmp/mfit-android-overrides/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+          mkdir -p android/app/src/main/kotlin/com/mfit/app
+          cp /tmp/mfit-android-overrides/MainActivity.kt android/app/src/main/kotlin/com/mfit/app/MainActivity.kt
+          chmod +x android/gradlew
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze Dart sources
+        run: flutter analyze --no-pub
+      - name: Build release APK
+        run: flutter build apk --release
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: mfit-android-release
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
