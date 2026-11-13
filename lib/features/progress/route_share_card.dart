@@ -36,7 +36,7 @@ class _RouteShareCardPageState extends State<RouteShareCardPage> {
       image.dispose();
       if (bytes == null) throw StateError('ساخت تصویر کارت ناموفق بود');
       final directory = await getTemporaryDirectory();
-      final file = File('\${directory.path}/mfit-route-\${DateTime.now().millisecondsSinceEpoch}.png');
+      final file = File('${directory.path}/mfit-route-${DateTime.now().millisecondsSinceEpoch}.png');
       await file.writeAsBytes(bytes.buffer.asUint8List(), flush: true);
       await Share.shareXFiles([XFile(file.path, mimeType: 'image/png')], text: 'مسیر ثبت‌شده با MFit · Move your way');
     } catch (error) {
@@ -161,9 +161,9 @@ class _RouteShareCardPageState extends State<RouteShareCardPage> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 22),
                       child: Row(children: [
-                        Expanded(child: _ShareMetric(icon: Icons.route_rounded, label: 'GPS POINTS', value: '\${points.length}')),
+                        Expanded(child: _ShareMetric(icon: Icons.route_rounded, label: 'GPS POINTS', value: '${points.length}')),
                         Container(width: 1, height: 42, color: Colors.white24),
-                        Expanded(child: _ShareMetric(icon: Icons.speed_rounded, label: 'LIVE SPEED', value: speed > .5 ? '\${speed.toStringAsFixed(1)} km/h' : '—')),
+                        Expanded(child: _ShareMetric(icon: Icons.speed_rounded, label: 'LIVE SPEED', value: speed > .5 ? '${speed.toStringAsFixed(1)} km/h' : '—')),
                         Container(width: 1, height: 42, color: Colors.white24),
                         const Expanded(child: _ShareMetric(icon: Icons.calendar_today_rounded, label: 'DATE', value: 'TODAY')),
                       ]),
