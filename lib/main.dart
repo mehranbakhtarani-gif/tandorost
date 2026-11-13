@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/session_engine.dart';
 import 'core/gps_tracker.dart';
@@ -92,11 +93,11 @@ class _MFitShellState extends State<MFitShell> {
   Widget _page() {
     if (!ready) return const Center(child: CircularProgressIndicator(color: green));
     switch (tab) {
-      case 1: return ActivityPage(session: session, gps: gps);
+      case 1: return ActivityPage(session: session, gps: gps, progressEntries: progressEntries);
       case 2: return NutritionPage(diary: diary, entries: foodEntries, water: water, onWater: _setWater, onChanged: (v) => setState(() => foodEntries = v));
       case 3: return RoutePage(tracker: gps);
       case 4: return ProgressPage(log: progress, entries: progressEntries, onChanged: (v) => setState(() => progressEntries = v));
-      default: return HomePage(session: session, foods: foodEntries,
+      default: return HomePage(session: session, foods: foodEntries, progressEntries: progressEntries,
         onActivity: () => setState(() => tab = 1),
         onNutrition: () => setState(() => tab = 2),
         onProgress: () => setState(() => tab = 4));
@@ -177,109 +178,273 @@ class LiveStrip extends StatelessWidget {
 class HomePage extends StatelessWidget {
   final SessionEngine session;
   final List<FoodEntry> foods;
+  final List<ProgressEntry> progressEntries;
   final VoidCallback onActivity, onNutrition, onProgress;
-  const HomePage({super.key, required this.session, required this.foods, required this.onActivity, required this.onNutrition, required this.onProgress});
+  const HomePage({super.key, required this.session, required this.foods, required this.progressEntries, required this.onActivity, required this.onNutrition, required this.onProgress});
+
   @override
   Widget build(BuildContext context) {
     final today = DateTime.now();
     final entries = foods.where((e) => _sameDay(e.loggedAt, today)).toList();
     final kcal = entries.fold<double>(0, (s, e) => s + e.food.forGrams(e.grams)['kcal']!);
-    return ListView(padding: const EdgeInsets.only(bottom: 22), children: [
-      const PageHeader('SPORT PERFORMANCE', 'روزت رو قدرتمند بساز'),
-      LiveStrip(session: session),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Container(
-        padding: const EdgeInsets.all(21),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          gradient: const LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF315F42), Color(0xFF173D2B), Color(0xFF10291E)]),
-          boxShadow: [BoxShadow(color: green.withOpacity(.18), blurRadius: 20, offset: const Offset(0, 9))],
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [const Expanded(child: Text('YOUR DAILY EDGE', style: TextStyle(color: lime, fontSize: 10, letterSpacing: 1.7, fontWeight: FontWeight.w900))), _tag('KEEP MOVING')]),
-          const SizedBox(height: 17),
-          const Text('Push your\nlimits.', style: TextStyle(color: Colors.white, fontSize: 35, height: 1.02, fontWeight: FontWeight.w900, letterSpacing: -1)),
-          const SizedBox(height: 9),
-          const Text('هر روز کمی قوی‌تر از دیروز.', style: TextStyle(color: Colors.white70, fontSize: 12)),
-          const SizedBox(height: 20),
-          Row(children: [
-            Expanded(child: FilledButton.icon(onPressed: onActivity, icon: const Icon(Icons.play_arrow_rounded), label: const Text('شروع تمرین'), style: FilledButton.styleFrom(backgroundColor: lime, foregroundColor: ink, padding: const EdgeInsets.symmetric(vertical: 13)))),
-            const SizedBox(width: 10),
-            _heroMetric('TODAY', entries.length.toString(), 'وعده ثبت‌شده'),
+    final weight = progressEntries.where((e) => e.metric == ProgressMetric.weightKg).toList();
+    final waist = progressEntries.where((e) => e.metric == ProgressMetric.waistCm).toList();
+    final steps = progressEntries.where((e) => e.metric == ProgressMetric.steps && _sameDay(e.date, today)).toList();
+    return ListView(padding: const EdgeInsets.fromLTRB(0, 10, 0, 24), children: [
+      Padding(padding: const EdgeInsets.fromLTRB(20, 8, 20, 18), child: Row(children: [
+        Container(width: 42, height: 42, decoration: BoxDecoration(color: green, borderRadius: BorderRadius.circular(15)), child: const Center(child: Text('m', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)))),
+        const SizedBox(width: 10),
+        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('MFit', style: TextStyle(color: green, fontSize: 21, fontWeight: FontWeight.w900)),
+          Text('حرکت، سلامتی، پیشرفت', style: TextStyle(color: muted, fontSize: 10)),
+        ])),
+        Container(width: 40, height: 40, decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: green.withOpacity(.06), blurRadius: 12)]), child: const Icon(Icons.person_outline_rounded, color: green)),
+      ])),
+      Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: ClipPath(
+        clipper: _FlowCardClipper(),
+        child: Container(padding: const EdgeInsets.fromLTRB(21, 21, 21, 24), decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topRight, end: Alignment.bottomLeft, colors: [Color(0xFF315F42), Color(0xFF173D2B), Color(0xFF10291E)])),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [const Expanded(child: Text('MFIT · FASTING', style: TextStyle(color: lime, fontSize: 9, letterSpacing: 1.7, fontWeight: FontWeight.w900))), _tag('روزانه')]),
+            const SizedBox(height: 18),
+            const Text('روزه‌داری آگاهانه', style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 6),
+            const Text('بازه‌ی تغذیه و استراحتت را با آگاهی مدیریت کن.', style: TextStyle(color: Colors.white70, fontSize: 11)),
+            const SizedBox(height: 17),
+            Row(children: [
+              const Expanded(child: Text('هنوز بازه‌ای ثبت نشده', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))),
+              FilledButton.tonalIcon(onPressed: onNutrition, icon: const Icon(Icons.restaurant_menu_rounded, size: 16), label: const Text('تغذیه'), style: FilledButton.styleFrom(backgroundColor: lime, foregroundColor: ink, visualDensity: VisualDensity.compact)),
+            ]),
           ]),
-        ]),
+        ),
       )),
-      const SizedBox(height: 23),
-      const SectionLabel('عملکرد امروز', 'DAILY PERFORMANCE'),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Row(children: [
-        const Expanded(child: MetricTile(icon: Icons.directions_walk_rounded, label: 'قدم‌ها', value: '—', unit: 'اتصال حسگر در مرحله بعد', accent: green)),
-        const SizedBox(width: 9),
-        Expanded(child: MetricTile(icon: Icons.local_fire_department_rounded, label: 'کالری غذا', value: kcal.round().toString(), unit: 'kcal ثبت‌شده', accent: Color(0xFFEA914A))),
-        const SizedBox(width: 9),
-        Expanded(child: AnimatedBuilder(animation: session, builder: (_, __) => MetricTile(icon: Icons.timer_outlined, label: 'تمرین', value: session.formatted.substring(0, 5), unit: 'زمان جلسه', accent: const Color(0xFF4E8CC7)))),
+      const SizedBox(height: 18),
+      Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Expanded(flex: 7, child: GestureDetector(onTap: onActivity, child: Container(
+          constraints: const BoxConstraints(minHeight: 142), padding: const EdgeInsets.all(17),
+          decoration: BoxDecoration(color: lime, borderRadius: const BorderRadius.only(topLeft: Radius.circular(27), topRight: Radius.circular(27), bottomLeft: Radius.circular(27), bottomRight: Radius.circular(8)), boxShadow: [BoxShadow(color: const Color(0xFF9BCB37).withOpacity(.18), blurRadius: 17, offset: const Offset(0, 7))]),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Icon(Icons.directions_run_rounded, color: ink, size: 25), const Spacer(),
+            const Text('حرکت امروز', style: TextStyle(color: ink, fontSize: 17, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 4), const Text('شروع فعالیت و ثبت مسیر', style: TextStyle(color: Color(0xFF43572A), fontSize: 10)),
+            const SizedBox(height: 8), const Row(children: [Text('شروع کن', style: TextStyle(color: ink, fontSize: 11, fontWeight: FontWeight.w900)), SizedBox(width: 5), Icon(Icons.arrow_back_rounded, color: ink, size: 15)]),
+          ]),
+        ))),
+        const SizedBox(width: 10),
+        Expanded(flex: 4, child: GestureDetector(onTap: onNutrition, child: Container(
+          constraints: const BoxConstraints(minHeight: 142), padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: const BorderRadius.only(topLeft: Radius.circular(27), topRight: Radius.circular(8), bottomLeft: Radius.circular(27), bottomRight: Radius.circular(27)), boxShadow: [BoxShadow(color: green.withOpacity(.05), blurRadius: 15, offset: const Offset(0, 6))]),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Icon(Icons.local_fire_department_rounded, color: Color(0xFFEA914A), size: 23), const Spacer(),
+            const Text('دریافت انرژی', style: TextStyle(color: ink, fontSize: 11, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 5), Text(kcal.round().toString(), style: const TextStyle(color: green, fontSize: 24, fontWeight: FontWeight.w900)),
+            const Text('کیلوکالری', style: TextStyle(color: muted, fontSize: 9)),
+          ]),
+        ))),
       ])),
       const SizedBox(height: 22),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Row(children: [const Expanded(child: SectionLabel('مسیر پیشرفت', 'YOUR PROGRESS')), TextButton(onPressed: onProgress, child: const Text('تحلیل کامل'))])),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: GestureDetector(
-        onTap: onProgress,
-        child: Container(padding: const EdgeInsets.all(17), decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(23)), child: const Row(children: [
-          Icon(Icons.insights_rounded, color: green, size: 29), SizedBox(width: 13),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('اندازه‌گیری کن، بهتر شو', style: TextStyle(color: ink, fontWeight: FontWeight.w900, fontSize: 14)),
-            SizedBox(height: 4), Text('وزن، دور کمر و روند فعالیتت را ثبت کن', style: TextStyle(color: muted, fontSize: 11)),
-          ])),
-          Icon(Icons.arrow_back_ios_new_rounded, size: 15, color: green),
-        ])),
-      )),
-      const SizedBox(height: 20),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Row(children: [const Expanded(child: SectionLabel('تغذیه امروز', 'SMART NUTRITION')), TextButton(onPressed: onNutrition, child: const Text('ثبت غذا'))])),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: GestureDetector(
-        onTap: onNutrition,
-        child: Container(padding: const EdgeInsets.all(17), decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(22)), child: Row(children: [
-          const Icon(Icons.restaurant_menu_rounded, color: green, size: 25), const SizedBox(width: 12),
-          Expanded(child: Text(entries.length.toString() + ' مورد ثبت شده · ' + kcal.round().toString() + ' کیلوکالری', style: const TextStyle(color: ink, fontWeight: FontWeight.w700, fontSize: 12))),
-          const Icon(Icons.add_circle, color: green),
-        ])),
-      )),
+      Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Row(children: [
+        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('مسیر پیشرفت', style: TextStyle(color: green, fontSize: 17, fontWeight: FontWeight.w900)), Text('بر اساس داده‌های ثبت‌شده', style: TextStyle(color: muted, fontSize: 10))])),
+        TextButton(onPressed: onProgress, child: const Text('جزئیات')),
+      ])),
+      Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: GestureDetector(onTap: onProgress, child: Container(
+        padding: const EdgeInsets.all(17), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(23), boxShadow: [BoxShadow(color: green.withOpacity(.045), blurRadius: 16, offset: const Offset(0, 5))]),
+        child: Column(children: [
+          Row(children: [
+            _homeValue('وزن', weight.isEmpty ? '—' : weight.last.value.toStringAsFixed(1), 'kg'),
+            _homeDivider(),
+            _homeValue('دور کمر', waist.isEmpty ? '—' : waist.last.value.toStringAsFixed(1), 'cm'),
+            _homeDivider(),
+            _homeValue('قدم امروز', steps.isEmpty ? '—' : steps.last.value.round().toString(), 'قدم'),
+          ]),
+          const SizedBox(height: 15),
+          Row(children: [const Icon(Icons.insights_rounded, color: green, size: 17), const SizedBox(width: 7), const Expanded(child: Text('روندها فقط با ثبت اندازه‌گیری واقعی نمایش داده می‌شوند.', style: TextStyle(color: muted, fontSize: 9))), const Icon(Icons.chevron_left_rounded, color: green, size: 18)]),
+        ]),
+      ))),
+      const SizedBox(height: 19),
+      Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Row(children: [const Expanded(child: Text('تغذیه امروز', style: TextStyle(color: green, fontSize: 16, fontWeight: FontWeight.w900)),), TextButton(onPressed: onNutrition, child: const Text('ثبت غذا'))])),
+      Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: GestureDetector(onTap: onNutrition, child: Container(
+        padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+        child: Row(children: [
+          const Icon(Icons.restaurant_menu_rounded, color: green, size: 23), const SizedBox(width: 11),
+          Expanded(child: Text(entries.isEmpty ? 'هنوز غذایی برای امروز ثبت نکرده‌ای' : entries.length.toString() + ' مورد ثبت شده', style: const TextStyle(color: ink, fontWeight: FontWeight.w700, fontSize: 11))),
+          Text(kcal.round().toString() + ' kcal', style: const TextStyle(color: green, fontWeight: FontWeight.w900, fontSize: 12)), const SizedBox(width: 6), const Icon(Icons.add_circle, color: green),
+        ]),
+      ))),
     ]);
   }
+
+  Widget _homeValue(String label, String value, String unit) => Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Text(label, style: const TextStyle(color: muted, fontSize: 9, fontWeight: FontWeight.w600)), const SizedBox(height: 5),
+    Text(value, style: const TextStyle(color: green, fontSize: 19, fontWeight: FontWeight.w900)), Text(unit, style: const TextStyle(color: muted, fontSize: 8)),
+  ]));
+  Widget _homeDivider() => Container(width: 1, height: 43, margin: const EdgeInsets.symmetric(horizontal: 9), color: const Color(0xFFE9EEE7));
 }
 
-class ActivityPage extends StatelessWidget {
+class _FlowCardClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) => Path()
+    ..moveTo(0, 25)..quadraticBezierTo(0, 0, 27, 0)..lineTo(size.width - 35, 0)
+    ..quadraticBezierTo(size.width, 0, size.width, 35)..lineTo(size.width, size.height - 34)
+    ..quadraticBezierTo(size.width, size.height, size.width - 35, size.height)..lineTo(40, size.height)
+    ..quadraticBezierTo(0, size.height, 0, size.height - 40)..close();
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+class ActivityPage extends StatefulWidget {
   final SessionEngine session;
   final GpsTracker gps;
-  const ActivityPage({super.key, required this.session, required this.gps});
+  final List<ProgressEntry> progressEntries;
+  const ActivityPage({super.key, required this.session, required this.gps, required this.progressEntries});
+  @override
+  State<ActivityPage> createState() => _ActivityPageState();
+}
+
+class _ActivityPageState extends State<ActivityPage> with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+  String _mapMode = 'street';
+  int _selectedActivity = 0;
+  bool _stopped = false;
+  static const _activities = [
+    [Icons.directions_walk_rounded, 'پیاده‌روی'], [Icons.directions_bike_rounded, 'دوچرخه'],
+    [Icons.fitness_center_rounded, 'قدرتی'], [Icons.directions_run_rounded, 'دویدن'],
+    [Icons.favorite_rounded, 'هوازی'], [Icons.self_improvement_rounded, 'یوگا'],
+  ];
+
+  @override
+  void initState() { super.initState(); _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 700)); widget.session.addListener(_syncPulse); _syncPulse(); }
+  void _syncPulse() { if (widget.session.isActive) { if (!_pulse.isAnimating) _pulse.repeat(reverse: true); } else { _pulse.stop(); _pulse.value = 1; } }
+  @override
+  void dispose() { widget.session.removeListener(_syncPulse); _pulse.dispose(); super.dispose(); }
+
+  Future<void> _start() async {
+    final restarting = _stopped;
+    if (restarting) await widget.session.reset();
+    await widget.session.start();
+    await widget.gps.start(resume: !restarting && widget.session.elapsed > Duration.zero);
+    if (mounted) setState(() => _stopped = false);
+  }
+  Future<void> _pause() async { await widget.session.pause(); await widget.gps.stop(); }
+  Future<void> _continue() async { await widget.session.start(); await widget.gps.start(resume: true); if (mounted) setState(() => _stopped = false); }
+  Future<void> _stop() async { await widget.session.pause(); await widget.gps.stop(); if (mounted) setState(() => _stopped = true); }
+  Future<void> _share() async {
+    await Share.share('گزارش فعالیت MFit\nنوع فعالیت: ' + _activities[_selectedActivity][1] as String + '\nمدت: ' + widget.session.formatted + '\nمسافت: ' + widget.gps.distanceLabel + ' کیلومتر');
+  }
+
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-    animation: session,
-    builder: (_, __) => ListView(padding: const EdgeInsets.only(bottom: 24), children: [
-      const PageHeader('MOVE WITH PURPOSE', 'فعالیت'),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Container(
-        padding: const EdgeInsets.all(22), decoration: BoxDecoration(color: green, borderRadius: BorderRadius.circular(28)),
-        child: Column(children: [
-          Row(children: [const Expanded(child: Text('LIVE WORKOUT', style: TextStyle(color: lime, letterSpacing: 1.5, fontSize: 10, fontWeight: FontWeight.w900))), _tag(session.isActive ? 'LIVE' : 'READY')]),
-          const SizedBox(height: 23),
-          Text(session.formatted, style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.w300, letterSpacing: 2, fontFeatures: [FontFeature.tabularFigures()])),
-          const SizedBox(height: 7),
-          const Text('مدت زمان جلسه تمرین', style: TextStyle(color: Colors.white70, fontSize: 11)),
-          const SizedBox(height: 24),
-          Row(children: [
-            Expanded(child: FilledButton.icon(onPressed: () async { if (session.isActive) { await session.pause(); await gps.stop(); } else { final resume = session.elapsed > Duration.zero; await session.start(); await gps.start(resume: resume); } }, icon: Icon(session.isActive ? Icons.pause_rounded : Icons.play_arrow_rounded), label: Text(session.isActive ? 'توقف موقت' : 'شروع تمرین'), style: FilledButton.styleFrom(backgroundColor: lime, foregroundColor: ink, padding: const EdgeInsets.symmetric(vertical: 14)))),
-            const SizedBox(width: 10),
-            IconButton.filledTonal(onPressed: () async { await session.reset(); await gps.stop(); }, icon: const Icon(Icons.restart_alt_rounded), style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(.15), foregroundColor: Colors.white)),
+    animation: Listenable.merge([widget.session, widget.gps]),
+    builder: (_, __) {
+      final distance = widget.gps.distanceMeters / 1000;
+      final speed = widget.gps.speedMps * 3.6;
+      final todaySteps = widget.progressEntries.where((e) => e.metric == ProgressMetric.steps && _sameDay(e.date, DateTime.now())).toList();
+      final steps = todaySteps.isEmpty ? '—' : todaySteps.last.value.round().toString();
+      final active = widget.session.isActive;
+      final paused = !active && widget.session.elapsed > Duration.zero && !_stopped;
+      final hasRoute = widget.gps.route.isNotEmpty;
+      final center = hasRoute ? widget.gps.route.last : const LatLng(0, 0);
+      return ListView(padding: const EdgeInsets.fromLTRB(0, 12, 0, 24), children: [
+        Padding(padding: const EdgeInsets.fromLTRB(20, 0, 20, 16), child: Row(children: [
+          Container(width: 40, height: 40, decoration: BoxDecoration(color: green, borderRadius: BorderRadius.circular(14)), child: const Center(child: Text('m', style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900)))),
+          const SizedBox(width: 10),
+          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('MFit', style: TextStyle(color: green, fontSize: 20, fontWeight: FontWeight.w900)), Text('حرکت، سلامتی، پیشرفت', style: TextStyle(color: muted, fontSize: 10))])),
+          Container(width: 38, height: 38, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle), child: const Icon(Icons.person_outline_rounded, color: green)),
+        ])),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Row(children: [
+          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('فعالیت', style: TextStyle(color: Color(0xFF203E2C), fontSize: 27, fontWeight: FontWeight.w900)), Text('حرکت کن، پیشرفت کن', style: TextStyle(color: muted, fontSize: 11))])),
+          Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7), decoration: BoxDecoration(color: const Color(0xFFDCEBDD), borderRadius: BorderRadius.circular(30)), child: Row(children: [Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF398B50), shape: BoxShape.circle)), const SizedBox(width: 6), const Text('GPS آماده', style: TextStyle(color: green, fontSize: 10, fontWeight: FontWeight.w800))])),
+        ])),
+        const SizedBox(height: 15),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30)), child: Row(children: [_periodTab('امروز', true), _periodTab('هفته', false), _periodTab('تاریخچه', false)]))),
+        const SizedBox(height: 14),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 14), child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(25), gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFA8DDA0), Color(0xFF8BCB8D), Color(0xFF78B982)]), boxShadow: [BoxShadow(color: const Color(0xFF4C8C55).withOpacity(.12), blurRadius: 18, offset: const Offset(0, 7))]),
+          child: Stack(children: [
+            Positioned.fill(child: CustomPaint(painter: _ActivityWavesPainter())),
+            Padding(padding: const EdgeInsets.fromLTRB(17, 14, 17, 13), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Align(alignment: Alignment.centerRight, child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: const Color(0xFF315B3D).withOpacity(.72), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withOpacity(.65))), child: Row(mainAxisSize: MainAxisSize.min, children: [
+                FadeTransition(opacity: active ? _pulse : const AlwaysStoppedAnimation(1), child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFF20B94C), shape: BoxShape.circle))),
+                const SizedBox(width: 6), const Text('فعالیت زنده', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900)),
+              ]))),
+              const SizedBox(height: 7),
+              Align(alignment: Alignment.centerRight, child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), decoration: BoxDecoration(color: const Color(0xFF315B3D).withOpacity(.72), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withOpacity(.65))), child: const Text('مسافت پیموده‌شده', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900)))),
+              const SizedBox(height: 5),
+              Text(distance.toStringAsFixed(2) + ' KM', textAlign: TextAlign.right, style: const TextStyle(color: Colors.white, fontSize: 42, height: 1.15, fontWeight: FontWeight.w900, letterSpacing: -.8)),
+              const SizedBox(height: 10),
+              Row(children: [_activityMetric('مدت', widget.session.formatted.substring(0, 5)), _activityMetric('کالری', '—'), _activityMetric('سرعت', speed.toStringAsFixed(1)), _activityMetric('ضربان', '—')]),
+              const SizedBox(height: 11),
+              const Align(alignment: Alignment.centerRight, child: Text('کنترل فعالیت', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900))),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: _control(Icons.play_arrow_rounded, 'شروع', _start, enabled: !active && !paused)),
+                const SizedBox(width: 5), Expanded(child: _control(Icons.pause_rounded, 'مکث', _pause, enabled: active)),
+                const SizedBox(width: 5), Expanded(child: _control(Icons.play_circle_outline_rounded, 'ادامه', _continue, enabled: paused)),
+                const SizedBox(width: 5), Expanded(child: _control(Icons.stop_rounded, 'توقف', _stop, enabled: active || paused)),
+                const SizedBox(width: 5), Expanded(child: _control(Icons.share_rounded, 'اشتراک', _share, enabled: true)),
+              ]),
+              const SizedBox(height: 7),
+              Text(active ? 'فعالیت در حال اجرا' : paused ? 'فعالیت موقتاً متوقف شده' : _stopped ? 'فعالیت پایان یافته' : 'آماده‌ی شروع فعالیت', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
+            ])),
           ]),
-        ]),
-      )),
-      const SizedBox(height: 22),
-      const SectionLabel('انتخاب نوع فعالیت', 'CHOOSE YOUR SESSION'),
-      const Padding(padding: EdgeInsets.symmetric(horizontal: 18), child: Column(children: [
-        ActivityOption(icon: Icons.directions_walk_rounded, title: 'پیاده‌روی', detail: 'هوازی · شدت متوسط', time: '۲۰–۴۰ دقیقه'),
-        ActivityOption(icon: Icons.directions_run_rounded, title: 'دویدن', detail: 'استقامت و ظرفیت هوازی', time: '۱۵–۳۰ دقیقه'),
-        ActivityOption(icon: Icons.fitness_center_rounded, title: 'تمرین قدرتی', detail: 'قدرت و عضله‌سازی', time: '۲۰ دقیقه'),
-        ActivityOption(icon: Icons.self_improvement_rounded, title: 'کشش و انعطاف', detail: 'ریکاوری و دامنه حرکتی', time: '۸–۱۲ دقیقه'),
-      ])),
-      const Padding(padding: EdgeInsets.fromLTRB(22, 12, 22, 0), child: Text('زمان‌سنج مرکزی است و با جابه‌جایی تب متوقف نمی‌شود. ثبت GPS و اعلان دائمی اندروید در مرحله بعد فعال می‌شوند.', style: TextStyle(color: muted, fontSize: 11, height: 1.5))),
-    ]),
+        )),
+        const SizedBox(height: 19),
+        const SectionLabel('نوع فعالیت', 'CHOOSE YOUR SESSION'),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: GridView.builder(
+          shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), itemCount: _activities.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, crossAxisSpacing: 8, mainAxisSpacing: 8, childAspectRatio: 1.45),
+          itemBuilder: (_, i) {
+            final selected = i == _selectedActivity;
+            return GestureDetector(onTap: () => setState(() => _selectedActivity = i), child: Container(
+              decoration: BoxDecoration(color: selected ? const Color(0xFFD6EBD1) : Colors.white, borderRadius: BorderRadius.circular(17), border: Border.all(color: selected ? const Color(0xFF78A879) : Colors.white)),
+              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(_activities[i][0] as IconData, color: const Color(0xFF315D3E), size: 21), const SizedBox(height: 4), Text(_activities[i][1] as String, style: const TextStyle(color: Color(0xFF36543D), fontSize: 10, fontWeight: FontWeight.w700))]),
+            ));
+          },
+        )),
+        const SizedBox(height: 18),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Row(children: [const Expanded(child: Text('مسیر فعالیت', style: TextStyle(color: green, fontSize: 17, fontWeight: FontWeight.w900))), Text(distance.toStringAsFixed(2) + ' KM', style: const TextStyle(color: green, fontSize: 11, fontWeight: FontWeight.w800))])),
+        const SizedBox(height: 9),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22)), child: Column(children: [
+          Container(padding: const EdgeInsets.all(3), decoration: BoxDecoration(color: const Color(0xFFEEF2EC), borderRadius: BorderRadius.circular(30)), child: Row(children: [_mapModeButton('خیابانی', 'street'), _mapModeButton('ماهواره‌ای', 'satellite')])),
+          const SizedBox(height: 8),
+          ClipRRect(borderRadius: BorderRadius.circular(16), child: SizedBox(height: 155, child: hasRoute
+            ? FlutterMap(key: ValueKey(_mapMode + widget.gps.route.length.toString()), options: MapOptions(initialCenter: center, initialZoom: 15), children: [
+                TileLayer(urlTemplate: _mapMode == 'street' ? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png' : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', userAgentPackageName: 'com.mfit.app', maxZoom: 19),
+                if (widget.gps.route.length > 1) PolylineLayer(polylines: [Polyline(points: widget.gps.route, strokeWidth: 5, color: const Color(0xFF4E9A60))]),
+                MarkerLayer(markers: [Marker(point: widget.gps.route.first, width: 22, height: 22, child: const Icon(Icons.circle, color: Colors.white, size: 16)), Marker(point: widget.gps.route.last, width: 26, height: 26, child: const Icon(Icons.location_on, color: Color(0xFFD65E4B), size: 25))]),
+              ])
+            : CustomPaint(painter: RoutePainter(), child: Container(color: const Color(0xFFE6EBDD), alignment: Alignment.center, child: const Text('با شروع فعالیت، مسیر واقعی اینجا ثبت می‌شود', style: TextStyle(color: green, fontSize: 10, fontWeight: FontWeight.w700))))),
+        ]))),
+        const SizedBox(height: 18),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Row(children: [const Expanded(child: Text('خلاصه امروز', style: TextStyle(color: green, fontSize: 17, fontWeight: FontWeight.w900))), const Text('عملکرد روزانه', style: TextStyle(color: muted, fontSize: 10))])),
+        const SizedBox(height: 9),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Row(children: [
+          Expanded(child: _summaryTile(Icons.directions_walk_rounded, steps, 'قدم')), const SizedBox(width: 8),
+          Expanded(child: _summaryTile(Icons.route_rounded, distance.toStringAsFixed(2), 'کیلومتر')), const SizedBox(width: 8),
+          Expanded(child: _summaryTile(Icons.local_fire_department_rounded, '—', 'کالری')),
+        ])),
+      ]);
+    },
   );
+
+  Widget _periodTab(String text, bool selected) => Expanded(child: Container(padding: const EdgeInsets.symmetric(vertical: 9), decoration: BoxDecoration(color: selected ? const Color(0xFFDDEBDD) : Colors.transparent, borderRadius: BorderRadius.circular(25)), alignment: Alignment.center, child: Text(text, style: TextStyle(color: selected ? const Color(0xFF28543A) : muted, fontSize: 10, fontWeight: selected ? FontWeight.w800 : FontWeight.w500))));
+  Widget _activityMetric(String label, String value) => Expanded(child: Column(children: [Text(label, style: const TextStyle(color: Colors.white70, fontSize: 9)), const SizedBox(height: 3), Text(value, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900, fontFeatures: [FontFeature.tabularFigures()]))]));
+  Widget _control(IconData icon, String label, VoidCallback onTap, {required bool enabled}) => Opacity(opacity: enabled ? 1 : .42, child: Material(color: Colors.white.withOpacity(.24), borderRadius: BorderRadius.circular(11), child: InkWell(onTap: enabled ? onTap : null, borderRadius: BorderRadius.circular(11), child: Container(padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 1), decoration: BoxDecoration(borderRadius: BorderRadius.circular(11), border: Border.all(color: Colors.white.withOpacity(.65))), child: Column(children: [Icon(icon, color: Colors.white, size: 17), const SizedBox(height: 3), Text(label, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800))])))));
+  Widget _mapModeButton(String label, String mode) { final selected = _mapMode == mode; return Expanded(child: GestureDetector(onTap: () => setState(() => _mapMode = mode), child: Container(padding: const EdgeInsets.symmetric(vertical: 8), decoration: BoxDecoration(color: selected ? Colors.white : Colors.transparent, borderRadius: BorderRadius.circular(25)), alignment: Alignment.center, child: Text(label, style: const TextStyle(color: Color(0xFF34523C), fontSize: 10, fontWeight: FontWeight.w700))))); }
+  Widget _summaryTile(IconData icon, String value, String label) => Container(padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 9), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)), child: Column(children: [Icon(icon, color: const Color(0xFF5B9360), size: 18), const SizedBox(height: 6), Text(value, style: const TextStyle(color: Color(0xFF284A33), fontSize: 16, fontWeight: FontWeight.w900)), Text(label, style: const TextStyle(color: muted, fontSize: 9))]));
+}
+
+class _ActivityWavesPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final wave = Paint()..color = Colors.white.withOpacity(.20)..style = PaintingStyle.stroke..strokeWidth = 2;
+    final band = Paint()..color = const Color(0xFFE9F9D9).withOpacity(.25)..style = PaintingStyle.stroke..strokeWidth = 29;
+    final p1 = Path()..moveTo(-30, size.height * .55)..cubicTo(size.width * .12, size.height * .05, size.width * .38, size.height * .25, size.width * .55, size.height * .52)..cubicTo(size.width * .72, size.height * .8, size.width * .84, size.height * .85, size.width + 25, size.height * .28);
+    final p2 = Path()..moveTo(-20, size.height * .75)..cubicTo(size.width * .22, size.height * .35, size.width * .36, size.height * .46, size.width * .58, size.height * .7)..cubicTo(size.width * .75, size.height * .92, size.width * .9, size.height * .95, size.width + 20, size.height * .55);
+    canvas.drawPath(p1, band); canvas.drawPath(p2, wave);
+  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class NutritionPage extends StatefulWidget {
