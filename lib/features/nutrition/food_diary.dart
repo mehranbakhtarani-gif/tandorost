@@ -14,7 +14,8 @@ class FoodDiary {
       final rows = jsonDecode(raw) as List<dynamic>;
       return rows.map((row) {
         final data = row as Map<String, dynamic>;
-        final food = FoodCatalog.foods.where((item) => item.id == data['foodId']).firstOrNull ?? FoodNutrition(
+        final matches = FoodCatalog.foods.where((item) => item.id == data['foodId']);
+        final food = matches.isNotEmpty ? matches.first : FoodNutrition(
           id: data['foodId'] as String,
           name: data['foodName'] as String? ?? 'خوراکی ثبت‌شده',
           kcal: (data['kcal'] as num?)?.toDouble() ?? 0,
