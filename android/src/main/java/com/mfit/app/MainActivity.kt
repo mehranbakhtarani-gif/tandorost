@@ -906,8 +906,11 @@ private fun ActivityPanel(
     }
     val routeLine = remember(mapView) {
         Polyline().apply {
-            outlinePaint.color = android.graphics.Color.rgb(155, 190, 0)
-            outlinePaint.strokeWidth = 11f
+            outlinePaint.color = android.graphics.Color.rgb(52, 190, 145)
+            outlinePaint.strokeWidth = 10f
+            outlinePaint.isAntiAlias = true
+            outlinePaint.strokeCap = android.graphics.Paint.Cap.ROUND
+            outlinePaint.strokeJoin = android.graphics.Paint.Join.ROUND
         }
     }
     val currentMarker = remember(mapView) {
