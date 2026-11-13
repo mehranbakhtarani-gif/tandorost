@@ -30,7 +30,7 @@ jobs:
           mkdir -p /tmp/mfit-android-overrides
           cp android/app/src/main/AndroidManifest.xml /tmp/mfit-android-overrides/AndroidManifest.xml
           cp android/app/src/main/kotlin/com/mfit/app/MainActivity.kt /tmp/mfit-android-overrides/MainActivity.kt
-          flutter create --platforms=android --org com.mfit --project-name mfit /tmp/mfit-scaffold
+          flutter create --platforms=android --org com.mfit --project-name app /tmp/mfit-scaffold
           rm -rf android
           cp -R /tmp/mfit-scaffold/android android
           cp /tmp/mfit-android-overrides/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
