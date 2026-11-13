@@ -24,6 +24,7 @@ class TrackingService : Service(), LocationListener {
     private var last: Location? = null
     private var startedAt = 0L
     private var lastAcceptedAt = 0L
+    private var pauseRequested = false
     private var wakeLock: PowerManager.WakeLock? = null
     private val timerHandler = Handler(Looper.getMainLooper())
     private val timerTick = object : Runnable {
@@ -109,15 +110,42 @@ class TrackingService : Service(), LocationListener {
     override fun onProviderDisabled(provider: String) {}
     @Deprecated("Deprecated by platform") override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
     override fun onBind(intent: Intent?): IBinder? = null
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int { if (intent?.action == "STOP") { stopSelf(); return START_NOT_STICKY }; return START_STICKY }
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            "PAUSE" -> {
+                pauseRequested = true
+                val prefs = getSharedPreferences("mfit_native", MODE_PRIVATE)
+                val elapsed = if (startedAt > 0L) ((System.currentTimeMillis() - startedAt) / 1000L).coerceAtLeast(prefs.getLong("live_seconds", 0L)) else prefs.getLong("live_seconds", 0L)
+                prefs.edit().putLong("live_seconds", elapsed).putLong("session_started_at", 0L)
+                    .putBoolean("tracking_active", false).putBoolean("session_paused", true).apply()
+                stopSelf()
+                return START_NOT_STICKY
+            }
+            "FINISH", "STOP" -> {
+                stopSelf()
+                return START_NOT_STICKY
+            }
+        }
+        return START_STICKY
+    }
     override fun onDestroy() {
         try { manager.removeUpdates(this) } catch (_: Exception) {}
         try { if (wakeLock?.isHeld == true) wakeLock?.release() } catch (_: Exception) {}
         wakeLock = null
         timerHandler.removeCallbacks(timerTick)
         val p = getSharedPreferences("mfit_native", MODE_PRIVATE)
+        if (pauseRequested) {
+            val elapsed = if (startedAt > 0L) ((System.currentTimeMillis() - startedAt) / 1000L).coerceAtLeast(p.getLong("live_seconds", 0L)) else p.getLong("live_seconds", 0L)
+            p.edit().putLong("live_seconds", elapsed).putLong("session_started_at", 0L)
+                .putBoolean("tracking_active", false).putBoolean("session_paused", true).apply()
+            sendBroadcast(Intent("com.mfit.app.TRACK_UPDATE").setPackage(packageName))
+            super.onDestroy()
+            return
+        }
         val meters = p.getFloat("live_distance", 0f)
-        val seconds = ((System.currentTimeMillis() - startedAt) / 1000L).coerceAtLeast(p.getLong("live_seconds", 0L))
+        val storedStart = p.getLong("session_started_at", 0L)
+        val elapsedFromStart = if (storedStart > 0L) (System.currentTimeMillis() - storedStart) / 1000L else 0L
+        val seconds = elapsedFromStart.coerceAtLeast(p.getLong("live_seconds", 0L))
         // Save timer-only sessions too when GPS is unavailable or the workout is stationary.
         if (meters > 0f || seconds > 0L) {
             val date = SimpleDateFormat("yyyy/MM/dd  HH:mm", Locale.getDefault()).format(Date())
@@ -139,7 +167,7 @@ class TrackingService : Service(), LocationListener {
                 .putLong("last_activity_seconds", seconds)
                 .putString("workout_log_date", today).putString("workout_log_today", workoutLog.joinToString("\n"))
                 .putFloat("live_distance", 0f).putLong("live_seconds", 0L).putLong("session_started_at", 0L)
-                .putBoolean("tracking_active", false).apply()
+                .putBoolean("tracking_active", false).putBoolean("session_paused", false).apply()
         } else p.edit().putFloat("live_distance", 0f).putLong("live_seconds", 0L).putLong("session_started_at", 0L).putBoolean("tracking_active", false).apply()
         sendBroadcast(Intent("com.mfit.app.TRACK_UPDATE").setPackage(packageName))
         super.onDestroy()
