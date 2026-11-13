@@ -1610,4 +1610,112 @@ if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostn
 
 })();
 </script><script>if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1')){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){});});}</script>
+
+<style id="mfit-safari-liquid-glass-nav">
+/* MFit Safari / Apple Music inspired Liquid Glass navigation.
+   CSS-only: preserves all existing tabs, data-tab attributes and JS handlers. */
+#nav.bottomnav{
+  position:fixed;
+  isolation:isolate;
+  overflow:visible;
+  padding:7px;
+  border:1px solid rgba(244,252,255,.48)!important;
+  border-radius:28px!important;
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.30) 0%,rgba(221,242,246,.13) 38%,rgba(255,255,255,.19) 72%,rgba(199,229,226,.10) 100%)!important;
+  box-shadow:
+    0 18px 48px rgba(0,8,18,.34),
+    0 3px 12px rgba(124,206,190,.12),
+    inset 0 1.5px 0 rgba(255,255,255,.78),
+    inset 0 -1px 0 rgba(220,248,246,.20),
+    inset 1px 0 0 rgba(255,255,255,.20),
+    inset -1px 0 0 rgba(255,255,255,.16)!important;
+  -webkit-backdrop-filter:blur(30px) saturate(220%) contrast(108%);
+  backdrop-filter:blur(30px) saturate(220%) contrast(108%);
+  transform:translateZ(0);
+}
+#nav.bottomnav:before{
+  content:"";
+  position:absolute;
+  inset:1px;
+  z-index:0;
+  pointer-events:none;
+  border-radius:inherit;
+  background:
+    radial-gradient(ellipse at 18% 0%,rgba(255,255,255,.34),transparent 43%),
+    radial-gradient(ellipse at 82% 100%,rgba(104,231,190,.13),transparent 48%),
+    linear-gradient(180deg,rgba(255,255,255,.10),transparent 48%,rgba(8,28,42,.08));
+}
+#nav.bottomnav:after{
+  content:"";
+  position:absolute;
+  z-index:2;
+  pointer-events:none;
+  top:1px;
+  left:11%;
+  right:11%;
+  height:1px;
+  border-radius:99px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.96) 24%,rgba(255,255,255,.62) 72%,transparent);
+  box-shadow:0 0 8px rgba(255,255,255,.32);
+}
+#nav.bottomnav button{
+  position:relative;
+  z-index:1;
+  min-height:52px;
+  border:1px solid transparent!important;
+  border-radius:21px!important;
+  background:transparent!important;
+  color:rgba(220,235,241,.82)!important;
+  transition:
+    color .28s ease,
+    background .32s cubic-bezier(.2,.8,.2,1),
+    border-color .32s ease,
+    box-shadow .32s ease,
+    transform .32s cubic-bezier(.18,.9,.25,1);
+  -webkit-tap-highlight-color:transparent;
+}
+#nav.bottomnav button.active{
+  color:#f3fff9!important;
+  border-color:rgba(255,255,255,.42)!important;
+  background:
+    radial-gradient(ellipse at 50% 0%,rgba(255,255,255,.38),transparent 68%),
+    linear-gradient(145deg,rgba(107,231,184,.30),rgba(74,164,190,.20) 58%,rgba(255,255,255,.13))!important;
+  box-shadow:
+    0 5px 18px rgba(44,191,146,.18),
+    inset 0 1px 0 rgba(255,255,255,.72),
+    inset 0 -1px 0 rgba(255,255,255,.15),
+    0 0 0 1px rgba(255,255,255,.07)!important;
+  text-shadow:0 1px 8px rgba(255,255,255,.22);
+}
+#nav.bottomnav button.active:before{
+  content:"";
+  position:absolute;
+  inset:2px 7px auto;
+  height:1px;
+  border-radius:99px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.96),transparent);
+  pointer-events:none;
+}
+#nav.bottomnav button .nav-icon{
+  filter:drop-shadow(0 1px 3px rgba(255,255,255,.13));
+  transition:transform .32s cubic-bezier(.18,.9,.25,1.2),filter .3s ease;
+}
+#nav.bottomnav button.active .nav-icon{
+  transform:translateY(-1px) scale(1.07);
+  filter:drop-shadow(0 0 7px rgba(190,255,225,.52));
+}
+#nav.bottomnav button:active{transform:scale(.94)}
+@media(prefers-reduced-motion:reduce){
+  #nav.bottomnav button,#nav.bottomnav button .nav-icon{transition:none!important}
+}
+@media(prefers-reduced-transparency:reduce){
+  #nav.bottomnav{
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+    background:rgba(12,31,46,.96)!important;
+  }
+}
+</style>
+
 </body></html>
