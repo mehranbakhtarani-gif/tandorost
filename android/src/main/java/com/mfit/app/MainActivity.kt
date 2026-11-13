@@ -1042,6 +1042,13 @@ private fun ActivityPanel(
         Icons.Default.DirectionsWalk to "پیاده‌روی", Icons.Default.DirectionsBike to "دوچرخه", Icons.Default.FitnessCenter to "قدرتی",
         Icons.Default.DirectionsRun to "دویدن", Icons.Default.Favorite to "هوازی", Icons.Default.SelfImprovement to "یوگا"
     )
+    val activityPrefs = remember { context.getSharedPreferences("mfit_native", Context.MODE_PRIVATE) }
+    var selectedActivity by remember {
+        mutableIntStateOf(types.indexOfFirst { it.second == activityPrefs.getString("active_activity_name", "پیاده‌روی") }.coerceAtLeast(0))
+    }
+    LaunchedEffect(selectedActivity) { activityPrefs.edit().putString("active_activity_name", types[selectedActivity].second).apply() }
+    val weightKg = activityPrefs.getString("weight", "70")?.replace(",", ".")?.toFloatOrNull()?.coerceIn(30f, 250f) ?: 70f
+    val estimatedCalories = (weightKg * (distance / 1000f) * .7f).toInt().coerceAtLeast(0)
     val pulse by rememberInfiniteTransition(label = "live-dot").animateFloat(.25f, 1f,
         infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "live-dot-alpha")
     val mapView = remember {
