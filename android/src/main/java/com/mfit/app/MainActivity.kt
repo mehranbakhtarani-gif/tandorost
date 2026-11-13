@@ -489,7 +489,7 @@ private fun MFitApp(tracking: Boolean, sessionPaused: Boolean, distance: Float, 
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("M F I T  /  WELLNESS", fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp, color = Lime)
+                            Text("T A N D O R O S T  /  WELLNESS", fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp, color = Lime)
                             if (tab == Tab.HOME) Text(java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("EEEE, dd MMM", java.util.Locale.ENGLISH)).uppercase(), fontSize = 9.sp, letterSpacing = 1.6.sp, color = Muted)
                             Text(when(tab) {
                                 Tab.HOME -> "روزت را زندگی کن."
@@ -500,7 +500,7 @@ private fun MFitApp(tracking: Boolean, sessionPaused: Boolean, distance: Float, 
                             }, fontSize = if (tab == Tab.HOME) 29.sp else 25.sp, fontWeight = FontWeight.ExtraBold, color = Ink, lineHeight = 36.sp)
                         }
                         Box(Modifier.size(44.dp).clip(CircleShape).background(Color(0xFF31594D).copy(alpha = .34f)).border(1.dp, Color.White.copy(alpha = .24f), CircleShape), contentAlignment = Alignment.Center) {
-                            Text("M", fontWeight = FontWeight.Black, fontSize = 21.sp, color = Ink)
+                            Text("T", fontWeight = FontWeight.Black, fontSize = 21.sp, color = Ink)
                         }
                     }
                 }
@@ -704,7 +704,7 @@ private fun MFitBottomBar(selectedTab: Tab, onSelect: (Tab) -> Unit) {
                                 Tab.PROFILE -> Icons.Default.Person
                             },
                             contentDescription = item.label,
-                            tint = if (lightDock) (if (selected) Color(0xFF367A45) else Color(0xFF8A968A)) else if (selected) MFitPalette.Canvas else Muted,
+                            tint = if (lightDock) (if (selected) Color(0xFF367A45) else Color(0xFF8A968A)) else if (selected) Color.White else Muted,
                             modifier = Modifier.size(iconSize).graphicsLayer { scaleX = iconScale; scaleY = iconScale }
                         )
                     }
