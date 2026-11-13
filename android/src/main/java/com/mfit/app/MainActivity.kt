@@ -29,8 +29,10 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -1186,9 +1188,9 @@ private fun ActivityPanel(
         }
         SectionTitle("خلاصه امروز", "عملکرد روزانه")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActivitySummary(Icons.Default.DirectionsWalk, "—", "قدم")
-            ActivitySummary(Icons.Default.Route, "%.2f".format(java.util.Locale.US, distance / 1000f), "کیلومتر")
-            ActivitySummary(Icons.Default.LocalFireDepartment, "—", "کالری")
+            ActivitySummary(Icons.Default.DirectionsWalk, "—", "قدم", Modifier.weight(1f))
+            ActivitySummary(Icons.Default.Route, "%.2f".format(java.util.Locale.US, distance / 1000f), "کیلومتر", Modifier.weight(1f))
+            ActivitySummary(Icons.Default.LocalFireDepartment, "—", "کالری", Modifier.weight(1f))
         }
         if (activityHistory.isNotEmpty()) {
             SectionTitle("سوابق", "آخرین فعالیت‌های ثبت‌شده")
@@ -1218,8 +1220,8 @@ private fun ActivityPanel(
         Text(label, color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
-@Composable private fun ActivitySummary(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String, label: String) {
-    Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(Color.White).padding(vertical = 12.dp, horizontal = 7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+@Composable private fun ActivitySummary(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String, label: String, modifier: Modifier = Modifier) {
+    Column(modifier.clip(RoundedCornerShape(16.dp)).background(Color.White).padding(vertical = 12.dp, horizontal = 7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(icon, null, tint = Color(0xFF5B9360), modifier = Modifier.size(18.dp))
         Text(value, color = Color(0xFF284A33), fontSize = 16.sp, fontWeight = FontWeight.Black)
         Text(label, color = Color(0xFF78847B), fontSize = 9.sp)
