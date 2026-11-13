@@ -509,10 +509,19 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                                     Text("عکس پروفایل", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Ink)
                                     Text("یک تصویر از گالری انتخاب کن؛ روی همین دستگاه ذخیره می‌شود.", fontSize = 11.sp, color = Muted)
-                                    OutlinedButton(onClick = { profilePhotoPicker.launch(arrayOf("image/*")) }) {
-                                        Icon(Icons.Default.AddAPhoto, null)
-                                        Spacer(Modifier.width(6.dp))
-                                        Text(if (profilePhotoBitmap == null) "افزودن عکس" else "تغییر عکس")
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        OutlinedButton(onClick = { profilePhotoPicker.launch(arrayOf("image/*")) }) {
+                                            Icon(Icons.Default.AddAPhoto, null)
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(if (profilePhotoBitmap == null) "افزودن عکس" else "تغییر عکس")
+                                        }
+                                        if (profilePhotoUri != null) {
+                                            TextButton(onClick = {
+                                                profilePhotoUri = null
+                                                profilePhotoBitmap = null
+                                                prefs.edit().remove("profile_photo_uri").apply()
+                                            }) { Text("حذف عکس", color = Color(0xFFB34D4D)) }
+                                        }
                                     }
                                 }
                             }
