@@ -382,7 +382,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                             Tab.PROFILE -> "مسیر پیشرفت تو."
                         }, fontSize = if (tab == Tab.HOME) 29.sp else 25.sp, fontWeight = FontWeight.ExtraBold, color = Ink, lineHeight = 36.sp)
                     }
-                    Box(Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = .72f)).border(1.dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(44.dp).clip(CircleShape).background(Color(0xFF31594D).copy(alpha = .34f)).border(1.dp, Color.White.copy(alpha = .24f), CircleShape), contentAlignment = Alignment.Center) {
                         Text("T", fontWeight = FontWeight.Black, fontSize = 21.sp, color = Ink)
                     }
                 }
@@ -502,7 +502,7 @@ private fun MFitApp(tracking: Boolean, distance: Float, seconds: Long, sessionSt
                                         modifier = Modifier.size(76.dp).clip(CircleShape)
                                     )
                                 } else {
-                                    Box(Modifier.size(76.dp).clip(CircleShape).background(Color.White.copy(alpha = .22f)).border(1.dp, Color.White.copy(alpha = .5f), CircleShape), contentAlignment = Alignment.Center) {
+                                    Box(Modifier.size(76.dp).clip(CircleShape).background(Color(0xFF31594D).copy(alpha = .28f)).border(1.dp, Color.White.copy(alpha = .28f), CircleShape), contentAlignment = Alignment.Center) {
                                         Icon(Icons.Default.Person, contentDescription = null, tint = Ink, modifier = Modifier.size(36.dp))
                                     }
                                 }
@@ -770,7 +770,7 @@ private fun AchievementPanel(snapshots: List<DailyWellnessSnapshot>, workouts: I
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { badge ->
                     Column(Modifier.weight(1f).clip(RoundedCornerShape(15.dp))
-                        .background(if (badge.third) Color.White.copy(alpha = .72f) else Color.White.copy(alpha = .28f)).padding(11.dp),
+                        .background(if (badge.third) Color(0xFF31594D).copy(alpha = .24f) else Color(0xFF31594D).copy(alpha = .13f)).padding(11.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Icon(if (badge.third) Icons.Default.EmojiEvents else Icons.Default.Lock, null,
                             tint = if (badge.third) Color(0xFF758C20) else Muted, modifier = Modifier.size(19.dp))
@@ -817,7 +817,7 @@ private fun SmartCoachPanel(
             Box(Modifier.fillMaxWidth(recovery / 100f).fillMaxHeight().clip(CircleShape).background(Lime))
         }
         Text(advice, color = Ink, fontSize = 13.sp, lineHeight = 21.sp, fontWeight = FontWeight.Medium)
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(17.dp)).background(Color.White.copy(alpha = .66f)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(17.dp)).background(Color(0xFF31594D).copy(alpha = .12f)).border(1.dp, Color.White.copy(alpha = .2f), RoundedCornerShape(17.dp)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("گزارش ثبت‌شده اخیر", color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text("$weeklyDays روز", color = Lime, fontSize = 11.sp, fontWeight = FontWeight.Bold)
